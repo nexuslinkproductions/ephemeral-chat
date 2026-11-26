@@ -1,0 +1,26 @@
+{
+  "project": "EPHEMERAL",
+  "form": "pipeline",
+  "identity": "security hardening engagement for the ephemeral single-file WebRTC chat",
+  "owner": "Marcel Spatz",
+  "stages": ["01-research", "02-plan", "03-build", "04-pentest", "05-verify"],
+  "tools": [
+    {"name": "yuri", "purpose": "locate files and docs via the machine index", "check": "yuri status"},
+    {"name": "terminal", "purpose": "run stage acceptance commands", "check": "echo ok"},
+    {"name": "delegate_task", "purpose": "worker lanes, standing ds4f at opencode-go", "check": "delegate_task action list"},
+    {"name": "pin-delegation.py", "purpose": "lane snapshot, pin, restore", "check": "python3 /Users/marcelspatz/.hermes/skills/autonomous-ai-agents/conductor/scripts/pin-delegation.py --show"}
+  ],
+  "do_not": [
+    "no public repo, remote or push until the owner says ship",
+    "input/ is read-only",
+    "workers write only their declared output file",
+    "no client or third-party personal data in this workspace"
+  ],
+  "indexes": [],
+  "checker": "koshirae.py absent on this host; stage Acceptance blocks are the gate; K18 unmet and known",
+  "roles": {
+    "lead": "Hermes default session, orchestrator, only git writer",
+    "builder": "ds4f lanes at reasoning max per wave",
+    "verifier": "claude-haiku-5-5 or another non-builder family"
+  }
+}

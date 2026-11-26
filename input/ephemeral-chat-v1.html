@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>Ephemeral chat</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0c0e;
+    --surface: #111317;
+    --surface-2: #16191e;
+    --line: #24282f;
+    --line-soft: #1b1f24;
+    --text: #e7e9ec;
+    --muted: #8d949d;
+    --faint: #7d858f;
+    --accent: #6d9bff;
+    --accent-soft: #17233d;
+    --danger: #ff7a7a;
+    --ok: #4ad38a;
+    --wait: #e0b45c;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  button, textarea, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: default; opacity: .45; }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 54px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+  .brand .mark {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--faint);
+  }
+  .status[data-state="on"]::before { background: var(--ok); }
+  .status[data-state="wait"]::before { background: var(--wait); }
+  .status[data-state="err"]::before { background: var(--danger); }
+  .status[data-state="err"] { color: var(--text); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .btn:hover:not(:disabled) { border-color: #39404a; background: #1a1e24; }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #08101f;
+    font-weight: 600;
+  }
+  .btn.primary:hover:not(:disabled) { background: #86acff; border-color: #86acff; }
+  .btn.ghost { background: transparent; }
+  .btn.small { padding: 5px 9px; font-size: 11.5px; }
+  .btn.icon { width: 38px; height: 38px; padding: 0; font-size: 18px; color: var(--muted); }
+  .btn.icon:hover:not(:disabled) { color: var(--text); }
+
+  main { min-height: 0; display: flex; }
+
+  #pairing {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .intro { width: 100%; max-width: 820px; margin: 0 auto; }
+  .intro h1 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  .intro p { margin: 0; max-width: 62ch; color: var(--muted); }
+  .fine { margin-top: 8px !important; font-size: 11.5px; color: var(--faint); }
+
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .panel h2 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .panel .hint { margin: -5px 0 2px; font-size: 12.5px; color: var(--faint); }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .field-head span { font-size: 11.5px; color: var(--muted); }
+
+  textarea {
+    width: 100%;
+    min-height: 78px;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.45;
+    outline: none;
+    resize: none;
+    overflow-wrap: anywhere;
+  }
+  textarea:focus { border-color: #3a4a6b; }
+  textarea::placeholder, #input::placeholder { color: var(--faint); opacity: 1; }
+  #offerIn, #answerIn { min-height: 64px; }
+  .row { display: flex; gap: 8px; }
+  .row .btn { flex: 1; }
+
+  #chat { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 26px max(20px, calc((100% - 760px) / 2)) 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #2b3038 transparent;
+  }
+  .log::-webkit-scrollbar { width: 10px; }
+  .log::-webkit-scrollbar-thumb {
+    background: #2b3038;
+    border-radius: 10px;
+    border: 3px solid var(--bg);
+  }
+  .empty {
+    margin: 44px auto;
+    color: var(--faint);
+    font-size: 13px;
+    text-align: center;
+  }
+  .msg {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: flex-start;
+    max-width: min(78%, 560px);
+  }
+  .msg.me { align-self: flex-end; align-items: flex-end; }
+  .msg.has-file { width: 340px; }
+  .bubble {
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .msg.me .bubble { background: var(--accent-soft); border-color: #26395f; }
+  .sys { align-self: center; color: var(--faint); font-size: 11.5px; text-align: center; }
+
+  .file {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+  }
+  .msg.me .file { background: var(--accent-soft); border-color: #26395f; }
+  .file-head { display: flex; align-items: baseline; gap: 8px; }
+  .file-name {
+    font-size: 12.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-size { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .file img {
+    display: block;
+    align-self: flex-start;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 260px;
+    object-fit: contain;
+    margin-top: 2px;
+    border: 1px solid var(--line-soft);
+  }
+  .bar { height: 2px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; width: 0; height: 100%; background: var(--accent); transition: width .12s linear; }
+  .file-foot { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--muted); }
+  .save { margin-left: auto; color: var(--accent); text-decoration: none; }
+  .save:hover { text-decoration: underline; }
+
+  #chat.drag::after {
+    content: "Drop to send";
+    position: absolute;
+    inset: 12px;
+    display: grid;
+    place-items: center;
+    border: 1px dashed #3d4a63;
+    background: rgba(11, 12, 14, .62);
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  #ended {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 40px 20px;
+  }
+  .ended-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 420px;
+    text-align: center;
+  }
+  .ended-mark {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--muted);
+    font-size: 16px;
+  }
+  .ended-inner h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+  .ended-inner p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .ended-inner .btn { margin-top: 4px; }
+
+  footer {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 12px max(20px, calc((100% - 760px) / 2));
+    border-top: 1px solid var(--line);
+  }
+  #input {
+    flex: 1;
+    min-height: 38px;
+    max-height: 120px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    outline: none;
+    resize: none;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  #input::-webkit-scrollbar { display: none; }
+  #input:focus { border-color: #3a4a6b; }
+  #send { padding: 9px 16px; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 76px;
+    transform: translateX(-50%);
+    max-width: 80vw;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 12.5px;
+    z-index: 10;
+  }
+
+  @media (max-width: 720px) {
+    .cols { grid-template-columns: 1fr; }
+    .msg { max-width: 88%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="mark"></span>ephemeral</div>
+  <div class="status" id="status" role="status">not connected</div>
+  <button class="btn ghost small" id="wipe" type="button" disabled>Wipe</button>
+</header>
+
+<main>
+  <section id="pairing">
+    <div class="intro">
+      <h1>One session. Nothing kept.</h1>
+      <p>Peer-to-peer and encrypted in transit. Messages and files live only in this tab — close it and they're gone. Both people need to be online at the same time. The session also wipes itself after <span id="idleNote">30 minutes</span> without activity.</p>
+      <p class="fine">Uses a public STUN server only to negotiate a direct route. No message or file content passes through it. Nothing is written to local storage, IndexedDB, or cookies.</p>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <h2>Start a session</h2>
+        <p class="hint">Create an invite, send the code to the other person, then paste their reply and connect.</p>
+        <button class="btn primary" id="create" type="button">Create invite</button>
+        <div class="field">
+          <div class="field-head"><span>Invite code</span><button class="btn ghost small" id="copyOffer" type="button" disabled>Copy</button></div>
+          <textarea id="offer" readonly placeholder="Your invite code appears here" spellcheck="false" aria-label="Invite code"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-head"><span>Their reply</span></div>
+          <textarea id="answerIn" placeholder="Paste the reply code here" spellcheck="false" aria-label="Their reply"></textarea>
+        </div>
+        <button class="btn" id="connect" type="button">Connect</button>
+      </div>
+
+      <div class="panel">
+        <h2>Join a session</h2>
+        <p class="hint">Paste the invite you received, create a reply, then send the reply code back.</p>
+        <div class="field">
+          <div class="field-head"><span>Invite code</span></div>
+          <textarea id="offerIn" placeholder="Paste the invite code here" spellcheck="false" aria-label="Invite code"></textarea>
+        </div>
+        <button class="btn" id="join" type="button">Create reply</button>
+        <div class="field">
+          <div class="field-head"><span>Your reply</span><button class="btn ghost small" id="copyAnswer" type="button" disabled>Copy</button></div>
+          <textarea id="answer" readonly placeholder="Your reply code appears here" spellcheck="false" aria-label="Your reply"></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="chat" hidden>
+    <div class="log" id="log" role="log" aria-live="polite">
+      <div class="empty" id="empty">Connected. Nothing is being saved.</div>
+    </div>
+  </section>
+
+  <section id="ended" hidden role="alert">
+    <div class="ended-inner">
+      <div class="ended-mark" aria-hidden="true">×</div>
+      <h1 id="endedTitle">Session ended</h1>
+      <p id="endedText">Everything from this session was erased.</p>
+      <button class="btn primary" id="restart" type="button">Start a new session</button>
+    </div>
+  </section>
+</main>
+
+<footer id="composer" hidden>
+  <button class="btn icon" id="attach" type="button" title="Attach files" disabled>+</button>
+  <input id="file" type="file" multiple hidden>
+  <textarea id="input" rows="1" placeholder="Write a message" disabled aria-label="Message"></textarea>
+  <button class="btn primary" id="send" type="button" disabled>Send</button>
+</footer>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const MAX_FILE = 50 * 1024 * 1024;
+  const CHUNK = 16 * 1024;
+  const MAX_TEXT = 20000;
+  const params = new URLSearchParams(location.search);
+  const idleSeconds = Number(params.get('idle'));
+  const IDLE_MS = Number.isFinite(idleSeconds) && idleSeconds >= 5
+    ? idleSeconds * 1000
+    : 30 * 60 * 1000;
+  const IDLE_CHECK_MS = Math.min(15000, Math.max(1000, Math.floor(IDLE_MS / 4)));
+  // ?idle=<seconds> overrides the 30-minute inactivity limit (minimum 5s).
+  const idleMinutes = IDLE_MS / 60000;
+  const idleLabel = idleMinutes >= 1
+    ? (Number.isInteger(idleMinutes) ? idleMinutes : idleMinutes.toFixed(1)) + (idleMinutes === 1 ? ' minute' : ' minutes')
+    : Math.round(IDLE_MS / 1000) + ' seconds';
+  $('idleNote').textContent = idleLabel;
+  const ICE = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+
+  const el = {
+    status: $('status'),
+    wipe: $('wipe'),
+    pairing: $('pairing'),
+    chat: $('chat'),
+    composer: $('composer'),
+    log: $('log'),
+    empty: $('empty'),
+    input: $('input'),
+    send: $('send'),
+    attach: $('attach'),
+    file: $('file'),
+    toast: $('toast'),
+    offer: $('offer'),
+    answerIn: $('answerIn'),
+    offerIn: $('offerIn'),
+    answer: $('answer'),
+    create: $('create'),
+    join: $('join'),
+    connect: $('connect'),
+    copyOffer: $('copyOffer'),
+    copyAnswer: $('copyAnswer'),
+    ended: $('ended'),
+    endedTitle: $('endedTitle'),
+    endedText: $('endedText'),
+    restart: $('restart')
+  };
+
+  let pc = null;
+  let dc = null;
+  let connected = false;
+  let sessionEnded = false;
+  let incoming = null;
+  let sendQueue = Promise.resolve();
+  let toastTimer = 0;
+  let idleTimer = 0;
+  let disconnectTimer = 0;
+  let lastActivity = Date.now();
+  let lastBump = 0;
+  const urls = [];
+
+  const uid = () => (crypto.randomUUID
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+  function setStatus(text, state) {
+    el.status.textContent = text;
+    if (state) el.status.dataset.state = state;
+    else delete el.status.dataset.state;
+  }
+
+  function toast(message, ms = 2600) {
+    el.toast.textContent = message;
+    el.toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.toast.hidden = true; }, ms);
+  }
+
+  function formatSize(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  function scrollDown() {
+    el.log.scrollTop = el.log.scrollHeight;
+  }
+
+  function atBottom() {
+    return el.log.scrollHeight - el.log.scrollTop - el.log.clientHeight < 90;
+  }
+
+  function addSystem(text) {
+    const node = document.createElement('div');
+    node.className = 'sys';
+    node.textContent = text;
+    el.log.appendChild(node);
+    el.empty.hidden = true;
+    scrollDown();
+  }
+
+  function addMessage(text, mine) {
+    const stick = atBottom();
+    const row = document.createElement('div');
+    row.className = 'msg' + (mine ? ' me' : '');
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    row.appendChild(bubble);
+    el.log.appendChild(row);
+    el.empty.hidden = true;
+    if (stick) scrollDown();
+  }
+
+  function closePeer() {
+    clearTimeout(disconnectTimer);
+    disconnectTimer = 0;
+    connected = false;
+    const channel = dc;
+    const peer = pc;
+    dc = null;
+    pc = null;
+    try { if (channel) channel.close(); } catch (_) {}
+    try { if (peer) peer.close(); } catch (_) {}
+    incoming = null;
+  }
+
+  function endSession(reason) {
+    if (sessionEnded) return;
+    sessionEnded = true;
+    clearInterval(idleTimer);
+    closePeer();
+    urls.splice(0).forEach((url) => {
+      try { URL.revokeObjectURL(url); } catch (_) {}
+    });
+    incoming = null;
+    sendQueue = Promise.resolve();
+    el.log.replaceChildren();
+    el.input.value = '';
+    el.offer.value = '';
+    el.answer.value = '';
+    el.offerIn.value = '';
+    el.answerIn.value = '';
+    el.file.value = '';
+    el.toast.hidden = true;
+    el.pairing.hidden = true;
+    el.chat.hidden = true;
+    el.composer.hidden = true;
+    el.input.disabled = true;
+    el.send.disabled = true;
+    el.attach.disabled = true;
+    el.wipe.disabled = true;
+    el.wipe.hidden = true;
+    el.create.disabled = true;
+    el.join.disabled = true;
+    el.connect.disabled = true;
+    el.copyOffer.disabled = true;
+    el.copyAnswer.disabled = true;
+    setStatus('session ended', 'err');
+
+    if (reason === 'timeout') {
+      el.endedTitle.textContent = 'Session timed out';
+      el.endedText.textContent = 'The inactivity limit was reached. Everything was erased.';
+    } else if (reason === 'peer') {
+      el.endedTitle.textContent = 'Session ended';
+      el.endedText.textContent = 'The other person left. Everything was erased.';
+    } else {
+      el.endedTitle.textContent = 'Session wiped';
+      el.endedText.textContent = 'Everything was erased.';
+    }
+    el.ended.hidden = false;
+    el.restart.focus();
+
+    if (reason === 'timeout' || reason === 'peer') {
+      setTimeout(() => {
+        try { window.close(); } catch (_) {}
+      }, 400);
+    }
+  }
+
+  function checkIdle() {
+    if (sessionEnded) return;
+    if (Date.now() - lastActivity >= IDLE_MS) endSession('timeout');
+  }
+
+  function bump(event) {
+    if (sessionEnded) return;
+    const now = Date.now();
+    if (now - lastBump < 1000) return;
+    lastBump = now;
+    if (now - lastActivity >= IDLE_MS) {
+      if (event && event.cancelable) event.preventDefault();
+      endSession('timeout');
+      return;
+    }
+    lastActivity = now;
+  }
+
+  function fail(error) {
+    if (sessionEnded) return;
+    const message = error && error.message ? error.message : 'Something went wrong';
+    closePeer();
+    setStatus('error', 'err');
+    toast(message, 5000);
+  }
+
+  function newPeer() {
+    const peer = new RTCPeerConnection({ iceServers: ICE });
+    peer.addEventListener('connectionstatechange', () => {
+      if (sessionEnded) return;
+      const state = peer.connectionState;
+      if (state === 'disconnected' && connected) {
+        clearTimeout(disconnectTimer);
+        disconnectTimer = setTimeout(() => {
+          if (connected && (peer.connectionState === 'disconnected' || peer.connectionState === 'failed')) {
+            endSession('peer');
+          }
+        }, 5000);
+      } else if (state === 'failed' || state === 'closed') {
+        clearTimeout(disconnectTimer);
+        if (connected) endSession('peer');
+        else if (state === 'failed') {
+          setStatus('connection failed', 'err');
+          toast('Could not connect. Create a new invite and try again.', 5000);
+        }
+      } else {
+        clearTimeout(disconnectTimer);
+      }
+    });
+    peer.addEventListener('datachannel', (event) => bindChannel(event.channel));
+    return peer;
+  }
+
+  function bindChannel(channel) {
+    dc = channel;
+    dc.binaryType = 'arraybuffer';
+    dc.bufferedAmountLowThreshold = 128 * 1024;
+    dc.addEventListener('open', () => {
+      if (sessionEnded) {
+        try { channel.close(); } catch (_) {}
+        return;
+      }
+      connected = true;
+      setStatus('connected', 'on');
+      el.pairing.hidden = true;
+      el.chat.hidden = false;
+      el.input.disabled = false;
+      el.send.disabled = false;
+      el.attach.disabled = false;
+      el.wipe.disabled = false;
+      el.composer.hidden = false;
+      el.input.focus();
+      scrollDown();
+    });
+    dc.addEventListener('close', () => {
+      if (connected && !sessionEnded) endSession('peer');
+    });
+    dc.addEventListener('message', onMessage);
+  }
+
+  function iceDone(peer, ms = 4500) {
+    if (peer.iceGatheringState === 'complete') return Promise.resolve();
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        peer.removeEventListener('icegatheringstatechange', onChange);
+        setTimeout(resolve, 150);
+      };
+      const onChange = () => {
+        if (peer.iceGatheringState === 'complete') finish();
+      };
+      const timer = setTimeout(finish, ms);
+      peer.addEventListener('icegatheringstatechange', onChange);
+    });
+  }
+
+  function toBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(binary);
+  }
+
+  function fromBase64(text) {
+    const binary = atob(text.replace(/\s+/g, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  async function pack(sdp) {
+    const bytes = new TextEncoder().encode(sdp);
+    if ('CompressionStream' in window) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+      const buffer = await new Response(stream).arrayBuffer();
+      return 'GZ1.' + toBase64(buffer);
+    }
+    return 'RAW1.' + toBase64(bytes);
+  }
+
+  async function unpack(code) {
+    const text = String(code || '').trim();
+    const dot = text.indexOf('.');
+    if (dot < 1) throw new Error('That code is not valid');
+    const kind = text.slice(0, dot);
+    const body = fromBase64(text.slice(dot + 1));
+    if (kind === 'GZ1') {
+      if (!('DecompressionStream' in window)) throw new Error('This browser cannot read that code');
+      const stream = new Blob([body]).stream().pipeThrough(new DecompressionStream('gzip'));
+      const buffer = await new Response(stream).arrayBuffer();
+      return new TextDecoder().decode(buffer);
+    }
+    if (kind === 'RAW1') return new TextDecoder().decode(body);
+    throw new Error('Unknown code format');
+  }
+
+  async function createInvite() {
+    if (sessionEnded) return;
+    el.create.disabled = true;
+    closePeer();
+    setStatus('gathering route…', 'wait');
+    try {
+      pc = newPeer();
+      bindChannel(pc.createDataChannel('chat', { ordered: true }));
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await iceDone(pc);
+      if (sessionEnded) return;
+      if (!pc.localDescription) throw new Error('Could not create an invite');
+      const code = await pack(pc.localDescription.sdp);
+      if (sessionEnded) return;
+      el.offer.value = code;
+      el.copyOffer.disabled = false;
+      el.connect.disabled = false;
+      setStatus('waiting for reply', 'wait');
+      toast('Invite ready. Send it to the other person.');
+      el.offer.focus();
+      el.offer.select();
+    } catch (error) {
+      fail(error);
+    } finally {
+      if (!sessionEnded) el.create.disabled = false;
+    }
+  }
+
+  async function joinSession() {
+    if (sessionEnded) return;
+    el.join.disabled = true;
+    closePeer();
+    setStatus('reading invite…', 'wait');
+    try {
+      const sdp = await unpack(el.offerIn.value);
+      if (sessionEnded) return;
+      pc = newPeer();
+      await pc.setRemoteDescription({ type: 'offer', sdp });
+      if (sessionEnded) return;
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await iceDone(pc);
+      if (sessionEnded) return;
+      const code = await pack(pc.localDescription.sdp);
+      if (sessionEnded) return;
+      el.answer.value = code;
+      el.copyAnswer.disabled = false;
+      setStatus('reply ready', 'wait');
+      toast('Reply ready. Send it back to the other person.');
+      el.answer.focus();
+      el.answer.select();
+    } catch (error) {
+      fail(error);
+    } finally {
+      if (!sessionEnded) el.join.disabled = false;
+    }
+  }
+
+  async function acceptAnswer() {
+    if (sessionEnded) return;
+    el.connect.disabled = true;
+    try {
+      if (!pc) throw new Error('Create an invite first');
+      const sdp = await unpack(el.answerIn.value);
+      if (sessionEnded) return;
+      if (!pc) throw new Error('Create an invite first');
+      await pc.setRemoteDescription({ type: 'answer', sdp });
+      if (!connected) setStatus('connecting…', 'wait');
+    } catch (error) {
+      fail(error);
+    } finally {
+      if (!sessionEnded) el.connect.disabled = false;
+    }
+  }
+
+  function onMessage(event) {
+    if (sessionEnded) return;
+    if (typeof event.data === 'string') {
+      let message;
+      try { message = JSON.parse(event.data); } catch (_) { return; }
+      if (message.k === 'msg' && typeof message.text === 'string') {
+        addMessage(message.text.slice(0, MAX_TEXT), false);
+      } else if (message.k === 'file-start') {
+        beginIncoming(message);
+      } else if (message.k === 'file-end') {
+        endIncoming();
+      }
+      return;
+    }
+    addChunk(event.data);
+  }
+
+  function sendText() {
+    if (sessionEnded) return;
+    const text = el.input.value.replace(/\s+$/, '');
+    if (!text.trim()) return;
+    if (!connected || !dc || dc.readyState !== 'open') {
+      toast('Not connected');
+      return;
+    }
+    dc.send(JSON.stringify({ k: 'msg', text: text.slice(0, MAX_TEXT) }));
+    addMessage(text.slice(0, MAX_TEXT), true);
+    el.input.value = '';
+    autoSize();
+    el.input.focus();
+  }
+
+  function drain() {
+    if (!dc || dc.bufferedAmount < 512 * 1024) return Promise.resolve();
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        if (dc) dc.removeEventListener('bufferedamountlow', finish);
+        resolve();
+      };
+      const timer = setTimeout(finish, 10000);
+      dc.addEventListener('bufferedamountlow', finish);
+    });
+  }
+
+  function queueFiles(files) {
+    if (sessionEnded) return;
+    for (const file of Array.from(files || [])) {
+      sendQueue = sendQueue
+        .then(() => sendFile(file))
+        .catch((error) => {
+          if (!sessionEnded) toast(error && error.message ? error.message : 'File failed', 4000);
+        });
+    }
+  }
+
+  async function sendFile(file) {
+    if (sessionEnded) return;
+    if (!connected || !dc || dc.readyState !== 'open') throw new Error('Not connected');
+    if (!file.size) throw new Error('"' + file.name + '" is empty');
+    if (file.size > MAX_FILE) throw new Error('"' + file.name + '" is over ' + formatSize(MAX_FILE));
+
+    const type = file.type || 'application/octet-stream';
+    const url = URL.createObjectURL(file);
+    urls.push(url);
+    const card = createFileCard(file.name, file.size, true);
+    if (/^image\/(png|jpe?g|gif|webp|avif)$/i.test(type)) {
+      card.img.src = url;
+      card.img.hidden = false;
+    }
+
+    dc.send(JSON.stringify({
+      k: 'file-start',
+      id: uid(),
+      name: file.name.slice(0, 200),
+      size: file.size,
+      type: type.slice(0, 120)
+    }));
+
+    let offset = 0;
+    let lastPercent = -1;
+    while (offset < file.size) {
+      if (!dc || dc.readyState !== 'open') {
+        card.error('connection lost');
+        throw new Error('Connection lost');
+      }
+      const end = Math.min(offset + CHUNK, file.size);
+      const buffer = await file.slice(offset, end).arrayBuffer();
+      dc.send(buffer);
+      offset = end;
+      const percent = Math.floor((offset / file.size) * 100);
+      if (percent !== lastPercent) {
+        lastPercent = percent;
+        card.progress(percent / 100);
+      }
+      await drain();
+    }
+    dc.send(JSON.stringify({ k: 'file-end' }));
+    card.done(url, false);
+  }
+
+  function createFileCard(name, size, mine) {
+    const row = document.createElement('div');
+    row.className = 'msg has-file' + (mine ? ' me' : '');
+    const card = document.createElement('div');
+    card.className = 'file';
+
+    const head = document.createElement('div');
+    head.className = 'file-head';
+    const title = document.createElement('span');
+    title.className = 'file-name';
+    title.textContent = String(name || 'file');
+    title.title = title.textContent;
+    const meta = document.createElement('span');
+    meta.className = 'file-size';
+    meta.textContent = formatSize(size);
+    head.append(title, meta);
+
+    const img = document.createElement('img');
+    img.hidden = true;
+    img.alt = '';
+
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const fill = document.createElement('i');
+    bar.appendChild(fill);
+
+    const foot = document.createElement('div');
+    foot.className = 'file-foot';
+    const state = document.createElement('span');
+    state.textContent = mine ? 'sending…' : 'receiving…';
+    const save = document.createElement('a');
+    save.className = 'save';
+    save.textContent = 'Save';
+    save.hidden = true;
+    save.rel = 'noopener';
+    foot.append(state, save);
+
+    card.append(head, img, bar, foot);
+    row.appendChild(card);
+    el.log.appendChild(row);
+    el.empty.hidden = true;
+    scrollDown();
+
+    return {
+      img: img,
+      progress(ratio) {
+        fill.style.width = Math.max(0, Math.min(100, ratio * 100)) + '%';
+      },
+      done(url, preview) {
+        fill.style.width = '100%';
+        fill.style.background = 'var(--line)';
+        state.textContent = mine ? 'sent' : 'received';
+        if (!mine) {
+          save.href = url;
+          save.download = title.textContent;
+          save.hidden = false;
+        }
+        if (preview) {
+          img.src = url;
+          img.hidden = false;
+        }
+        if (atBottom()) scrollDown();
+      },
+      error(message) {
+        state.textContent = message;
+        fill.style.background = 'var(--danger)';
+      }
+    };
+  }
+
+  function beginIncoming(message) {
+    if (incoming) return;
+    const size = Number(message.size);
+    if (!Number.isFinite(size) || size <= 0 || size > MAX_FILE) {
+      incoming = { reject: true };
+      addSystem('A file was refused (too large or invalid).');
+      return;
+    }
+    const name = String(message.name || 'file').slice(0, 200);
+    const type = String(message.type || 'application/octet-stream').slice(0, 120);
+    const card = createFileCard(name, size, false);
+    incoming = {
+      meta: { name, size, type },
+      buffer: new Uint8Array(size),
+      offset: 0,
+      card: card,
+      lastPercent: -1,
+      bad: false
+    };
+  }
+
+  function addChunk(data) {
+    if (!incoming || incoming.reject) return;
+    const bytes = new Uint8Array(data);
+    const room = incoming.buffer.length - incoming.offset;
+    if (bytes.byteLength > room) {
+      incoming.buffer.set(bytes.subarray(0, room), incoming.offset);
+      incoming.offset = incoming.buffer.length;
+      incoming.bad = true;
+    } else {
+      incoming.buffer.set(bytes, incoming.offset);
+      incoming.offset += bytes.byteLength;
+    }
+    const percent = Math.floor((incoming.offset / incoming.buffer.length) * 100);
+    if (percent !== incoming.lastPercent) {
+      incoming.lastPercent = percent;
+      incoming.card.progress(percent / 100);
+    }
+  }
+
+  function endIncoming() {
+    if (!incoming) return;
+    if (incoming.reject) {
+      incoming = null;
+      return;
+    }
+    const { meta, buffer, offset, card, bad } = incoming;
+    const bytes = bad ? buffer.slice(0, offset) : buffer;
+    const blob = new Blob([bytes], { type: meta.type });
+    const url = URL.createObjectURL(blob);
+    urls.push(url);
+    const preview = /^image\/(png|jpe?g|gif|webp|avif)$/i.test(meta.type);
+    card.done(url, preview);
+    if (offset !== meta.size || bad) card.error('incomplete');
+    incoming = null;
+  }
+
+  function autoSize() {
+    el.input.style.height = 'auto';
+    el.input.style.height = Math.min(el.input.scrollHeight + 2, 120) + 'px';
+  }
+
+  async function copyText(text, textarea) {
+    if (sessionEnded) return;
+    if (!text) {
+      toast('Nothing to copy yet');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Copied');
+    } catch (_) {
+      textarea.focus();
+      textarea.select();
+      toast('Press Ctrl/Cmd+C to copy');
+    }
+  }
+
+  function wipe() {
+    if (sessionEnded) return;
+    if (!confirm('End this session and wipe everything from memory? The other person will be disconnected.')) return;
+    endSession('wipe');
+  }
+
+  el.create.addEventListener('click', createInvite);
+  el.join.addEventListener('click', joinSession);
+  el.connect.addEventListener('click', acceptAnswer);
+  el.copyOffer.addEventListener('click', () => copyText(el.offer.value, el.offer));
+  el.copyAnswer.addEventListener('click', () => copyText(el.answer.value, el.answer));
+  el.send.addEventListener('click', sendText);
+  el.wipe.addEventListener('click', wipe);
+  el.restart.addEventListener('click', () => location.reload());
+  el.attach.addEventListener('click', () => el.file.click());
+
+  el.input.addEventListener('input', autoSize);
+  el.input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendText();
+    }
+  });
+
+  el.file.addEventListener('change', () => {
+    bump();
+    queueFiles(el.file.files);
+    el.file.value = '';
+  });
+
+  [el.offer, el.answer].forEach((area) => {
+    area.addEventListener('focus', () => area.select());
+  });
+
+  ['dragover', 'drop'].forEach((type) => {
+    document.addEventListener(type, (event) => {
+      if (!connected) return;
+      event.preventDefault();
+      if (type === 'dragover') {
+        el.chat.classList.add('drag');
+      } else {
+        el.chat.classList.remove('drag');
+        queueFiles(event.dataTransfer && event.dataTransfer.files);
+      }
+    });
+  });
+  el.chat.addEventListener('dragleave', () => el.chat.classList.remove('drag'));
+
+  document.addEventListener('paste', (event) => {
+    if (!connected) return;
+    const files = event.clipboardData && event.clipboardData.files;
+    if (files && files.length) {
+      event.preventDefault();
+      queueFiles(files);
+    }
+  });
+
+  const passiveActivity = ['pointerdown', 'pointermove', 'wheel', 'touchstart', 'paste', 'drop', 'input', 'click', 'focusin'];
+  passiveActivity.forEach((type) => addEventListener(type, bump, { capture: true, passive: true }));
+  addEventListener('keydown', bump, { capture: true });
+  idleTimer = setInterval(checkIdle, IDLE_CHECK_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkIdle();
+  });
+
+  addEventListener('pagehide', () => {
+    closePeer();
+    incoming = null;
+    el.log.replaceChildren();
+  });
+
+  addEventListener('pageshow', (event) => {
+    if (event.persisted) location.reload();
+    else checkIdle();
+  });
+})();
+</script>
+</body>
+</html>
