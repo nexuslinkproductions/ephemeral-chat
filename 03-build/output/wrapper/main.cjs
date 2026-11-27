@@ -22,7 +22,7 @@ const CORE_ENTRY = path.join(__dirname, 'core', 'ephemeral-chat-v2.html');
 // BC-W4 layer 3: the 64 hex character SHA-256 of the reviewed core, compiled in.
 // Build order rule (11 section 10): hash the core, commit this constant, then build the shell.
 // The all zero placeholder fails closed, so a shell built before the core serves nothing.
-const CORE_SHA256 = '0000000000000000000000000000000000000000000000000000000000000000';
+const CORE_SHA256 = '6c8c1283047f6ce7d3b926e6fd190d3c46b345926aa0142e02827cf2dc02558d';
 const UNPINNED = '0'.repeat(64);
 
 const BUILD_DATE = '2026-11-27';
