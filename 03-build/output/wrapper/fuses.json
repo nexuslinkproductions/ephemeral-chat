@@ -2,6 +2,7 @@
   "schema": "ephemeral-fuses/1",
   "card": "BC-W5",
   "electron": "45.5.0",
+  "requiredOff": ["runAsNode", "nodeOptions", "nodeCliInspect"],
   "fuses": {
     "runAsNode": false,
     "nodeOptions": false,

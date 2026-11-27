@@ -12,6 +12,8 @@
   },
   "scripts": {
     "start": "electron .",
+    "gate": "sh scripts/build-gate.sh",
+    "e2e": "sh scripts/e2e-core-load.sh",
     "fuses:read": "sh scripts/fuses.sh read",
     "fuses:write": "sh scripts/fuses.sh write",
     "hashes": "sh scripts/hash-artifacts.sh",

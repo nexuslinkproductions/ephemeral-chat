@@ -21,12 +21,20 @@ const CORE_ENTRY = path.join(__dirname, 'core', 'ephemeral-chat-v2.html');
 
 // BC-W4 layer 3: the 64 hex character SHA-256 of the reviewed core, compiled in.
 // Build order rule (11 section 10): hash the core, commit this constant, then build the shell.
-// The all zero placeholder fails closed, so a shell built before the core serves nothing.
-const CORE_SHA256 = 'd4d48d3711acc8a32ba1fca97faa02e2690bc2ef6ff3487434aba36c5c618742';
+// An all zero placeholder fails closed, and so does a stale constant, so a shell built before
+// the core, or against a different core, serves nothing.
+const CORE_SHA256 = '2092e0e9e8e3418ba167e22b99623094e0f5d05ea876014874be1e3c4b53b87b';
 const UNPINNED = '0'.repeat(64);
 
 const BUILD_DATE = '2026-11-27';
-const BUILD_HASH = process.env.EPHEMERAL_BUILD_HASH || 'unset-local-build';
+
+// P-09, WB-08: the release hash is a 64 hex character build input. A packaged build refuses
+// to start without one. A dev run has one escape hatch, never available in a packaged app,
+// and About reports that run as unverified.
+const BUILD_HASH_RAW = (process.env.EPHEMERAL_BUILD_HASH || '').trim().toLowerCase();
+const BUILD_HASH_OK = /^[0-9a-f]{64}$/.test(BUILD_HASH_RAW);
+const BUILD_HASH = BUILD_HASH_OK ? BUILD_HASH_RAW : 'UNVERIFIED';
+const ALLOW_UNVERIFIED = process.env.EPHEMERAL_ALLOW_UNVERIFIED === '1' && !app.isPackaged;
 
 // Stricter than the core meta tag at ephemeral-chat-v1.html line 6: frame-ancestors and
 // object-src are added, and worker-src plus media-src are present so the Blob Worker and
@@ -54,8 +62,17 @@ const RAM_ROOT = process.platform === 'linux' ? '/dev/shm' : os.tmpdir();
 const DATA_DIR = path.join(RAM_ROOT, 'ephemeral-' + process.pid + '-' + crypto.randomBytes(6).toString('hex'));
 
 let win = null;
+let coreSession = null;
 let killing = false;
 let ipcRejections = 0;
+let servedBytes = 0;
+
+// Downloads are a user-requested export from the in-memory session, never a page-chosen
+// path. The allowlist is the shipped save surface; everything else is refused.
+const DOWNLOAD_TYPES = new Set([
+  '.pdf', '.txt', '.md', '.csv', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif',
+  '.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a', '.docx', '.xlsx', '.pptx'
+]);
 
 // BC-W14, TB-W1: no debugger port in release. Refuse to start instead of opening one.
 for (const flag of ['remote-debugging-port', 'remote-debugging-pipe', 'inspect', 'inspect-brk']) {
@@ -63,6 +80,13 @@ for (const flag of ['remote-debugging-port', 'remote-debugging-pipe', 'inspect',
     process.stderr.write('ephemeral: refusing to start with --' + flag + '\n');
     process.exit(1);
   }
+}
+
+// P-09: no release hash, no release start. The in-code debug loop above is defense in depth
+// only; a fused binary is the control that makes it meaningful.
+if (!BUILD_HASH_OK && !ALLOW_UNVERIFIED) {
+  process.stderr.write('ephemeral: refusing to start: EPHEMERAL_BUILD_HASH must be 64 hex characters\n');
+  process.exit(1);
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -114,8 +138,13 @@ function main() {
 function start() {
   const core = readAndVerifyCore();
 
-  session.fromPartition('core').setSpellCheckerEnabled(false);
-  protocol.handle('app', (request) => serveCore(request, core));
+  // P-01, F-ENV-2: the window lives on the core partition, so the app protocol must be
+  // handled by that session. Registering on the default session served nobody, and the
+  // old origin compare failed because app://core has an opaque origin in the main process.
+  coreSession = session.fromPartition('core');
+  coreSession.setSpellCheckerEnabled(false);
+  coreSession.protocol.handle('app', (request) => serveCore(request, core));
+  coreSession.on('will-download', onDownload);
 
   ipcMain.handle('shell:wipe', (event) => {
     assertSender(event);
@@ -131,12 +160,20 @@ function start() {
 
   createWindow();
 
+  // P-01 proof hook, release inert: only a run with the variable set takes this path.
+  if (process.env.EPHEMERAL_E2E === '1') attachE2EProbe();
+
   app.setAboutPanelOptions({
     applicationName: 'ephemeral',
     applicationVersion: app.getVersion(),
     version: process.versions.electron,
-    credits: 'Core SHA-256: ' + CORE_SHA256 + '\nBuild hash: ' + BUILD_HASH + '\nBuild date: ' + BUILD_DATE
+    credits: 'Core SHA-256: ' + CORE_SHA256 + '\nBuild hash: ' + buildHashLine() + '\nBuild date: ' + BUILD_DATE
   });
+}
+
+// P-09: a start without a release hash is explicitly unverified, never silently labeled.
+function buildHashLine() {
+  return BUILD_HASH_OK ? BUILD_HASH : 'UNVERIFIED (development run, not a release build)';
 }
 
 // BC-W4: read the entry once, hash it, compare in constant time, and serve the same buffer.
@@ -158,18 +195,26 @@ function readAndVerifyCore() {
   return buffer;
 }
 
+// P-01: app://core is a custom standard scheme, so new URL().origin is the string "null"
+// in the main process. Compare the parsed scheme, host and path instead. The same predicate
+// is used for serving and for the IPC sender check, so one URL rule covers both.
+function isCoreUrl(value) {
+  let url;
+  try {
+    url = new URL(String(value || ''));
+  } catch (error) {
+    return false;
+  }
+  return url.protocol === 'app:' && url.hostname === 'core' && url.pathname === '/index.html';
+}
+
 // BC-W4: nothing but the pinned core is ever served, and the header cannot be dropped by
 // editing the file, which the meta tag can.
 function serveCore(request, core) {
-  let url;
-  try {
-    url = new URL(request.url);
-  } catch (error) {
-    return new Response('bad request', { status: 400 });
-  }
-  if (url.origin !== CORE_ORIGIN || url.pathname !== '/index.html') {
+  if (!isCoreUrl(request.url)) {
     return new Response('not found', { status: 404 });
   }
+  servedBytes += core.length;
   return new Response(core, {
     status: 200,
     headers: {
@@ -234,8 +279,17 @@ function createWindow() {
 
 // BC-W3: deny navigation, frames, webviews and window creation everywhere, not just on the
 // main window. BC-W1: deny every permission, camera and clipboard read included.
+// P-13, WB-04: the core evicts its own document with location.replace('about:blank') at the
+// end of a session, which is a security action. Allow that one exact URL by predicate and
+// keep every other navigation denied.
+function isBlankNavigation(url) {
+  return url === 'about:blank';
+}
+
 function hardenContents(event, contents) {
-  contents.on('will-navigate', (navEvent) => navEvent.preventDefault());
+  contents.on('will-navigate', (navEvent, url) => {
+    if (!isBlankNavigation(url)) navEvent.preventDefault();
+  });
   contents.on('will-frame-navigate', (navEvent) => navEvent.preventDefault());
   contents.on('will-attach-webview', (webviewEvent) => webviewEvent.preventDefault());
   contents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -262,16 +316,19 @@ function sendCommand(id) {
 }
 
 // BC-W2: reject any sender that is not the pinned core frame in this window, and count it.
+// BC-W2/P-01: check the frame URL with the same app://core predicate the server uses. The
+// old frame.origin compare is not stable for a custom standard scheme.
 function assertSender(event) {
-  let origin = null;
-  let senderId = null;
+  let ok = false;
   try {
-    origin = event.senderFrame ? event.senderFrame.origin : null;
-    senderId = event.sender.id;
+    ok = !!win &&
+      event.sender.id === win.webContents.id &&
+      !!event.senderFrame &&
+      isCoreUrl(event.senderFrame.url);
   } catch (error) {
-    origin = null;
+    ok = false;
   }
-  if (origin !== CORE_ORIGIN || !win || senderId !== win.webContents.id) {
+  if (!ok) {
     ipcRejections += 1;
     process.stderr.write('ephemeral: ipc rejected (' + ipcRejections + ')\n');
     throw new Error('ipc rejected');
@@ -289,7 +346,7 @@ function kill() {
   if (killing) return;
   killing = true;
   if (win && !win.isDestroyed()) {
-    win.webContents.send('shell:command', 'wipe');
+    sendCommand('wipe');
     setTimeout(hardKill, 300);
     return;
   }
@@ -297,7 +354,11 @@ function kill() {
 }
 
 function hardKill() {
-  const appSession = session.fromPartition('core');
+  const appSession = coreSession || session.fromPartition('core');
+  // P-13, WB-03: one clipboard policy. The core clears only when the document has focus
+  // (artifact:1818); the shell clears the OS clipboard only when its window is focused, so a
+  // background wipe never eats another application's clipboard.
+  const focused = !!(win && !win.isDestroyed() && win.isFocused());
   try {
     if (win && !win.isDestroyed()) win.destroy();
   } catch (error) {
@@ -314,7 +375,7 @@ function hardKill() {
     // best effort
   }
   try {
-    clipboard.clear();
+    if (focused) clipboard.clear();
   } catch (error) {
     // best effort
   }
@@ -332,6 +393,75 @@ function onBeforeQuit(event) {
   kill();
 }
 
+// P-12, WB-06: every download goes through this one sink. The page proposes a name; the
+// shell decides the type, the directory and the final path. A name never chooses a path.
+function safeDownloadName(raw) {
+  const base = path.basename(String(raw || ''))
+    .replace(/[^A-Za-z0-9._ -]/g, '_')
+    .replace(/^\.+/, '')
+    .trim();
+  return (base || 'download').slice(0, 120);
+}
+
+function uniqueDownloadPath(dir, name) {
+  const ext = path.extname(name);
+  const stem = name.slice(0, name.length - ext.length);
+  let target = path.join(dir, name);
+  let n = 1;
+  while (fs.existsSync(target)) {
+    target = path.join(dir, stem + '-' + n + ext);
+    n += 1;
+  }
+  return target;
+}
+
+function onDownload(event, item) {
+  const name = safeDownloadName(item.getFilename());
+  const ext = path.extname(name).toLowerCase();
+  if (!DOWNLOAD_TYPES.has(ext)) {
+    process.stderr.write('ephemeral: download refused, type not allowed: ' + (ext || 'none') + '\n');
+    item.cancel();
+    return;
+  }
+  const dir = path.join(app.getPath('downloads'), 'ephemeral');
+  fs.mkdirSync(dir, { recursive: true });
+  item.setSavePath(uniqueDownloadPath(dir, name));
+}
+
+// P-01 live proof. Reports the bytes the app:// handler served, the loaded URL, the boot
+// screen and one bridge round trip, then exits. A normal run never sets EPHEMERAL_E2E.
+function attachE2EProbe() {
+  win.webContents.once('did-fail-load', (event, code, description) => {
+    process.stderr.write('ephemeral-e2e: FAIL load ' + code + ' ' + description + '\n');
+    app.exit(1);
+  });
+  win.webContents.once('did-finish-load', async () => {
+    try {
+      const report = await win.webContents.executeJavaScript(
+        '(async () => {' +
+        '  const out = {' +
+        '    href: location.href,' +
+        '    title: document.title,' +
+        '    screen: document.body.dataset.screen || "",' +
+        '    elements: document.querySelectorAll("*").length,' +
+        '    pageBytes: document.documentElement.outerHTML.length,' +
+        '    shell: typeof window.shell' +
+        '  };' +
+        '  try { await window.shell.badge(true); out.badge = "ok"; }' +
+        '  catch (error) { out.badge = "fail:" + (error && error.message); }' +
+        '  return JSON.stringify(out);' +
+        '})()'
+      );
+      process.stderr.write('ephemeral-e2e: served=' + servedBytes + ' bytes electron=' +
+        process.versions.electron + ' ' + report + '\n');
+      app.exit(0);
+    } catch (error) {
+      process.stderr.write('ephemeral-e2e: FAIL ' + (error && error.message) + '\n');
+      app.exit(1);
+    }
+  });
+}
+
 function buildAgeDays() {
   const built = Date.parse(BUILD_DATE + 'T00:00:00Z');
   if (Number.isNaN(built)) return 0;
@@ -343,7 +473,7 @@ function showAbout() {
   const age = buildAgeDays();
   const lines = [
     'Electron ' + process.versions.electron + ' (Chromium ' + process.versions.chrome + ')',
-    'Build hash: ' + BUILD_HASH,
+    'Build hash: ' + buildHashLine(),
     'Core SHA-256: ' + CORE_SHA256,
     'Build date: ' + BUILD_DATE + ' (' + age + ' days old)'
   ];

@@ -709,3 +709,118 @@ This file scans clean by the same script: 0 non-ASCII bytes, 0 em or en dashes.
   not a budget leak.
 - nav needed a harness fix before it could pass on this box. The race is
   uncommon on a slower host and its failure mode is exit 2, never a false pass.
+
+## W21 repair lane B, P-03 to P-11 core side
+
+RUN: w21-ephemeral-repair-20261127, lane B.
+ARTIFACT: `03-build/output/ephemeral-chat-v2.html`, sha256 `2092e0e9e8e3418ba167e22b99623094e0f5d05ea876014874be1e3c4b53b87b`, 169,810 bytes.
+GATE: `03-build/output/probes/gate.py`, sha256 `203ebd4c48ed308713ace70a56f3ec307969b892fdc34f2dcdfc80a332959bc2`, 157,226 bytes.
+STATUS: repaired, 29 of 29 cases green with `cover` driving the app's relay mode.
+
+### Cards applied
+
+- P-03. Engine A now normalises a null chunk duration to one 30 fps frame and
+  calls `addVideoChunkRaw`, so the muxer never receives a non finite duration.
+  The over cap retry keeps the one retry and gains a rung B fallback when that
+  retry cannot use WebCodecs; a still oversize result keeps the named refusal.
+- P-04. A file start records `startedAt`. The transfer timer runs every second
+  and aborts an accepted transfer that has not delivered a first chunk within
+  `FIRST_CHUNK_MS` (5000 ms). An overlapping file start now aborts the held
+  transfer and accepts the new one, instead of aborting the new id.
+- P-05. Both migration arms drop any existing `mig` before starting, count
+  attempts against `MIG_MAX` (6 per session), clear `migTimer` before both
+  reassignments, and close the new `pc` when the arm fails before `mig` takes
+  ownership. Attempt counters reset when a pairing starts.
+- P-06. The artifact reads an optional relay config from the load query:
+  `relay` (required to enter relay mode), `relayUser`, `relayCred`. Relay mode
+  builds ICE from that one relay and forces `iceTransportPolicy: 'relay'`.
+  `assertCandidates` refuses with a named Relay unreachable error when no
+  `typ relay` candidate exists, so an invite or answer is never issued on a
+  direct path. No query keeps the stock three STUN build. The shipped file
+  contains no relay host and no relay URL.
+- P-07. When `window.shell` is present, the core listens for the preload
+  `ephemeral:command` wipe message and calls `endSession`, which posts the
+  panic frame on the live channel. Without the bridge the listener is not
+  installed, so the file stays a plain page.
+- P-10. `endSession` clears `el.digits` next to `el.log.replaceChildren()`.
+- P-11. The received file warning list adds lnk, desktop, url, hta, docm, xlsm,
+  reg and scf.
+- The `showScreen` comment now says S0 to S4 plus the gallery and about sheets,
+  matching the code.
+
+### Gate cover, rewritten
+
+The old case measured Chromium with a synthetic `RTCPeerConnection`; that is
+not an app capability. `case_cover` now loads the artifact with
+`?relay=turns:127.0.0.1:5349&relayUser=probe&relayCred=probe`, clicks create,
+and asserts the app's own peer configuration has only that relay and
+`iceTransportPolicy: 'relay'`. With the loopback relay unreachable, it then
+requires the Relay unreachable toast, an empty invite field, and the error
+status. The `--relay-host` argument is still required. `PASS cover`.
+
+### Suite, 29 cases
+
+Raw log `03-build/output/evidence/W21-suite-raw.log`, run as two batches in one
+log (15 then 14) because the shell wrapper caps one call at 420 s. Every case
+is a fresh process. 29 `=== CASE` lines, 29 `EXIT <case> 0` lines, 0 FAIL,
+0 SKIP, and 29 PASS lines plus the selftest detail line. `cover` ran with
+`--relay-host turns:127.0.0.1:5349`.
+
+### Targeted probes on the real artifact
+
+Script in scratch, not in the tree. Output:
+
+```
+PASS P-04 deadline constant
+PASS P-04 first chunk branch
+PASS P-04 aborts held id
+PASS P-04 overlap accepts new
+PASS P-05 cap and drop in startMigrate
+PASS P-05 timer cleared before both arms
+PASS P-05 offer pc closed on failure
+PASS P-07 listener only with bridge
+PASS P-10 digits cleared in endSession
+PASS P-11 warning list
+PASS P-03 raw null duration reproduces the old throw
+PASS P-03 finite duration path completes
+PASS P-11 .url shows the run-code warning
+PASS P-11 .hta shows the run-code warning
+PASS P-10 pre-wipe SAS digits present
+PASS P-10 endSession cleared the SAS digits
+PASS P-07 shell kill posted the panic frame
+PASS P-07 plain browser stays a no-op
+PROBES PASS
+```
+
+The muxer probe constructs a real `EncodedVideoChunk` with no duration and
+shows `addVideoChunk` throws the duration TypeError, then shows the same bytes
+through `addVideoChunkRaw` with a finite duration finalize cleanly. The P-07
+probe pairs two pages with `window.shell` defined, posts the preload wipe
+message, and observes the peer end on the panic frame; without the bridge the
+same message is a no-op. P-11 sends probe.url and setup.hta through the real
+file input and reads the receiver warning.
+
+### Byte scan, W21
+
+```
+ephemeral-chat-v2.html bytes=169810 sha256=2092e0e9e8e3418ba167e22b99623094e0f5d05ea876014874be1e3c4b53b87b nonascii=0 emdash=0 endash=0
+probes/gate.py bytes=157226 sha256=203ebd4c48ed308713ace70a56f3ec307969b892fdc34f2dcdfc80a332959bc2 nonascii=0 emdash=0 endash=0
+```
+
+The artifact carries 0 occurrences of the relay URL scheme literal, so the
+default build statement and the stun case are unchanged.
+
+### Limits recorded
+
+- P-04 and P-05 runtime injection was not built. The proof is the exact code
+  path pin plus the green file, migrate and panic cases; the stalled start and
+  repeated offer shapes need a sealed frame the harness cannot mint today.
+- Engine A was not run live on a headed 45 MiB clip. The duration throw and the
+  fixed call are proven at the muxer on the real page; the transcode case still
+  forces rung B as in W18.
+- The transcode clip generator is size sensitive. One exploratory run produced
+  46,246,112 bytes against its 47,185,920 byte threshold and exited 1 before
+  the app path was reached. The logged run and a standalone rerun both passed.
+- P-07 was proven with a stand-in `window.shell` object, not the Electron
+  preload. The message contract and the panic frame are the same; the live
+  shell run belongs to lane C.

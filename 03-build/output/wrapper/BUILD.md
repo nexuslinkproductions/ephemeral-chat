@@ -23,6 +23,8 @@ Sources: blueprint v2 sections 6.1, 6.3, 6.4 and 6.6; `11-packaging-executable.m
 | `scripts/sign-hashes.sh` | BC-W7 detached signature over the hash list, minisign or cosign. |
 | `scripts/verify-artifacts.sh` | BC-W7 and BC-W8 independent verifier. No network, no download code. |
 | `scripts/pin-core.sh` | BC-W4 layer 3 build input. Prints the core hash and fails on a stale constant. |
+| `scripts/build-gate.sh` | P-02 and P-09 release gate. Refuses an unset or malformed build hash, a loose fuse table, a stale core pin, or a binary whose three node entry point fuses are not Disabled. |
+| `scripts/e2e-core-load.sh` | P-01 live proof. Stages the wrapper beside the pinned core, runs the stock Electron binary, and requires the served byte count, the `app://core` URL, the S0 boot and one IPC round trip. |
 | `scripts/selfcheck.sh` | Every check this lane claims, in one rerunnable script. |
 | `SELF-CHECK.md` | Per card PASS or FAIL with the command and its raw output. |
 
@@ -35,10 +37,10 @@ asar. No packaging step runs this round.
 | Card | Where it is | How it is checked |
 |---|---|---|
 | BC-W1 | `main.cjs`: `app.enableSandbox()` before ready, and every window option closed: `nodeIntegration`, `nodeIntegrationInWorker`, `nodeIntegrationInSubFrames`, `contextIsolation`, `sandbox`, `webviewTag`, `webSecurity` | `scripts/selfcheck.sh` section 7 static scan. The runtime `process` and `require` assertion belongs to `gate.py shell` once a binary exists. |
-| BC-W2 | `preload.cjs` exposes one frozen `shell` object with `wipe()` and `badge(on)`. `main.cjs` `assertSender` checks `event.senderFrame.origin` against `app://core` and the sender id against the one window, rejects null frames, counts rejections, and validates `badge` as a boolean | `scripts/selfcheck.sh` section 8: one `exposeInMainWorld`, two invoke verbs, no `ipcRenderer` exposure. R3-W2 is the live probe. |
-| BC-W3 | `main.cjs` `hardenContents`: `will-navigate`, `will-frame-navigate` and `will-attach-webview` all denied, `setWindowOpenHandler` returns deny, every permission denied by both handlers | `scripts/selfcheck.sh` section 7. R3-W3 is the live probe. |
-| BC-W4 | `main.cjs`: `protocol.registerSchemesAsPrivileged` for `app` before ready, `protocol.handle('app')` serving only the verified buffer at `app://core/index.html` with a CSP response header. No `file://` anywhere in the tree | `scripts/selfcheck.sh` section 7 (banned `loadFile(` and `file://`) plus section 14 (64 hex pin). `scripts/pin-core.sh` gates the build order. |
-| BC-W5 | `fuses.json` plus `scripts/fuses.sh write` and `read` | `scripts/selfcheck.sh` section 6: nine fuses at the BC-W5 positions. The release gate is `npx @electron/fuses read --app <installed app>`, output attached to release evidence. |
+| BC-W2 | `preload.cjs` exposes one frozen `shell` object with `wipe()` and `badge(on)`. `main.cjs` `assertSender` checks `event.senderFrame.url` with the same `app://core/index.html` predicate the server uses, checks the sender id against the one window, rejects null frames, counts rejections, and validates `badge` as a boolean. `menu.cjs` `COMMANDS` is the only command list; the preload validates shape only | `scripts/selfcheck.sh` section 8: one `exposeInMainWorld`, two invoke verbs, no `ipcRenderer` exposure, no second command list. R3-W2 is the live probe. |
+| BC-W3 | `main.cjs` `hardenContents`: `will-navigate` allows only the exact `about:blank` eviction and denies every other URL, `will-frame-navigate` and `will-attach-webview` are denied, `setWindowOpenHandler` returns deny, every permission denied by both handlers | `scripts/selfcheck.sh` sections 7 and 15. R3-W3 is the live probe. |
+| BC-W4 | `main.cjs`: `protocol.registerSchemesAsPrivileged` for `app` before ready, `session.fromPartition('core').protocol.handle('app')` serving only the verified buffer at `app://core/index.html` with a CSP response header, and a scheme, host and path check because `new URL().origin` is `null` for this custom scheme. No `file://` anywhere in the tree | `scripts/selfcheck.sh` sections 7, 14 and 15, `scripts/pin-core.sh` gates the build order, `scripts/e2e-core-load.sh` proves the live load. |
+| BC-W5 | `fuses.json` plus `scripts/fuses.sh write` and `read`, and `scripts/build-gate.sh` which refuses a binary unless `runAsNode`, `nodeOptions` and `nodeCliInspect` read back Disabled | `scripts/selfcheck.sh` section 6 and 16. A stock Electron framework fails this gate: all three are Enabled (F-ENV-3). The release gate is `sh scripts/build-gate.sh --app <installed app>`, output attached to release evidence. |
 | BC-W6 | `package.json` pins `electron` to `45.5.0` and `@electron/fuses` to `2.1.3` exactly. `main.cjs` About shows Electron, Chromium, build hash, core hash, build date and the verify commands, and warns past 90 days | `node -e "require('./package.json')"` and the About string in `main.cjs`. SLA text below. |
 | BC-W7 | `scripts/hash-artifacts.sh`, `scripts/sign-hashes.sh`, `scripts/verify-artifacts.sh` | `scripts/selfcheck.sh` section 12 proves the verifier calls only minisign and the system hash tool. Release evidence carries both channel URLs and a verification transcript. |
 | BC-W8 | No updater symbol anywhere: no `autoUpdater`, no `setFeedURL`, no `checkForUpdates`. Policy below and in `UPDATE-POLICY.md` | `scripts/selfcheck.sh` section 11. R3-W5 is the release gate. |
@@ -59,13 +61,66 @@ blueprint 6.1: quarterly, or on a Chromium critical.
 
 The core pin is 64 hex characters in `main.cjs`, compared with `crypto.timingSafeEqual`
 against the bytes read from the asar. The served response is that same Buffer, so there is
-no check then load window. The constant is all zeros this round because the pin is committed
-at integration, after the CORE lane's `ephemeral-chat-v2.html` is final, and an unset pin
-fails closed: no window, exit 1, with the expected and actual hash in stderr and a native
-dialog. `scripts/pin-core.sh` prints the line to paste and exits 1 until the constant matches.
+no check then load window. The constant currently holds
+`d4d48d3711acc8a32ba1fca97faa02e2690bc2ef6ff3487434aba36c5c618742`, the reviewed V2 artifact
+at 165,744 bytes. A release build reruns `scripts/pin-core.sh` through `scripts/build-gate.sh`
+after the core is final, and the constant is updated to that final hash before packaging. An
+all zero constant fails closed: no window, exit 1, with the expected and actual hash in stderr
+and a native dialog. A real constant that no longer matches fails the same way. The build gate
+refuses both.
 
 Build order, from `11-packaging-executable.md` section 10: build the core, hash it, commit
 the constant, then build the shell. A hash computed after packaging proves nothing.
+
+## Build gate and the fuse posture
+
+`scripts/build-gate.sh` is the one command a release run must pass before packaging:
+
+```
+EPHEMERAL_BUILD_HASH=<64 hex> sh scripts/build-gate.sh --core <final core> --app <built app>
+```
+
+It refuses when the hash is unset or not 64 lowercase hex characters, when `fuses.json` does
+not require `runAsNode`, `nodeOptions` and `nodeCliInspect` off, when `main.cjs` does not carry
+the current core hash, and when the actual binary does not read back all three as Disabled.
+
+Shipped binaries are fused binaries, only. The fuse write in `scripts/fuses.sh` is a build
+step, not a suggestion, and the read in the same gate is the evidence. The in-code switch loop
+in `main.cjs` is defense in depth: it catches `--inspect` and `--inspect-brk` on the normal
+entry path, but `NODE_OPTIONS` and `ELECTRON_RUN_AS_NODE` run code outside `main.cjs` entirely
+(F-ENV-3). Only the fuses close that path, which is why the gate treats a stock framework as
+unshippable.
+
+Measured 2026-11-27 with `@electron/fuses` 2.1.3 read on the stock Electron 45.5.0 framework:
+RunAsNode Enabled, EnableNodeOptionsEnvironmentVariable Enabled, EnableNodeCliInspectArguments
+Enabled. The same gate command refused it. No fused release binary exists in this round, so the
+passing side of the read is the named limit.
+
+`EPHEMERAL_ALLOW_UNVERIFIED=1` is a development hatch, ignored when `app.isPackaged`. With it,
+a start without a valid hash is allowed only unpackaged, and About says
+`Build hash: UNVERIFIED (development run, not a release build)`. Without it, both build and
+start refuse.
+
+## Downloads and clipboard
+
+P-12: `session.fromPartition('core').on('will-download')` is the only download sink. It takes
+the page's proposed name, reduces it with `path.basename` and a character allowlist, refuses
+any extension outside the fixed list (pdf, txt, md, csv, png, jpg, jpeg, gif, webp, avif, mp4,
+webm, mp3, wav, ogg, m4a, docx, xlsx, pptx), and writes under `<downloads>/ephemeral` with a
+non clobbering name. Nothing else can choose a path. A refused download is cancelled and
+logged to stderr.
+
+P-13 clipboard policy: a kill clears the OS clipboard only when the shell window is focused,
+matching the core gate at artifact:1818 (`document.hasFocus()`). A background wipe does not
+touch another application's clipboard.
+
+## Live proof
+
+`scripts/e2e-core-load.sh` stages the wrapper beside the pinned core, runs it on a real
+Electron binary and asserts the probe line from `main.cjs`. `EPHEMERAL_E2E=1` is the only thing
+that turns the probe on, so a normal run never takes that path. Measured on the stock 45.5.0
+framework: `served=165744 bytes`, `app://core/index.html`, `screen S0`, `shell object`,
+`badge ok`.
 
 ## Bridge
 

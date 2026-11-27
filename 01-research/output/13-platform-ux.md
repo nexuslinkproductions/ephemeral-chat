@@ -170,7 +170,7 @@ One document, one screen at a time, no router, no history entries. Transitions a
 | S2 Verify | Peer connected | 60 digit safety number in 12 groups of 5, suite label, Match and Does not match, peer confirmation state | A skip button, a remember-this-device checkbox |
 | S3 Chat | Both sides confirmed | Header with status chips, transcript, composer, file tray, gallery entry, session menu | Search, message actions beyond reactions and delete, typing state |
 | S4 Ended | Kill, peer loss, anomaly, migration failure, idle | Reason, countdown, one sentence about what was destroyed | A cancel button, a session id, a "reopen" that preserves state |
-| S5 About and diagnostics | Menu or footer link | What is not protected, build hash, transport candidate type, monitor state, ratchet counters | Any session content |
+| Sheet About and diagnostics | Menu or footer link | What is not protected, build hash, transport candidate type, monitor state, ratchet counters | Any session content |
 
 Rules that make the map safe:
 
@@ -362,7 +362,7 @@ The renderer loads the packaged HTML from the app bundle, never a remote URL, an
 | File | New Invite (Cmd+N), New Session (Cmd+Shift+N), Close Window (Cmd+W) | New Invite is enabled only with no active session. New Session runs Migrate when a session is live |
 | Edit | Undo, Redo, Cut, Copy, Paste, Select All | Required. Codes are pasted, and removing the standard edit roles breaks that |
 | Session | Rotate Keys (Cmd+Shift+K), Wipe Session | Wipe has no accelerator. Double Escape is the panic chord, and a second menu accelerator would be a second path to test |
-| View | Diagnostics (Cmd+Shift+D), Actual Size, Enter Full Screen | Diagnostics is S5. No reload item, no zoom |
+| View | Diagnostics (Cmd+Shift+D), Actual Size, Enter Full Screen | Diagnostics is the about sheet. No reload item, no zoom |
 | Window | Minimize, Zoom, Bring All to Front | Standard |
 | Help | What This Protects, Verify Build | Verify Build opens the hash and the command to compare it |
 
@@ -465,7 +465,7 @@ Ten cards, in dependency order. Each names its file scope, one gate command, and
 |---|---|---|---|---|
 | UX-01 Message identity | `msg` frame gains `mid`, `addMessage`, log trim, `03-build/output/probes/gate.py` (case `mid`) | Core | `python3 03-build/output/probes/gate.py mid` | A reaction addresses the wrong message, or two messages share an id, which is F-12's positional bug with a new field |
 | UX-02 Reactions | `react` frame, dispatch row, `applyReact`, reaction map, pill render, hover row, palette, bucket, `gate.py` (case `react`) | Core | `python3 03-build/output/probes/gate.py react` | A reaction before SAS confirm, a duplicate that double counts, an unknown shortcode that renders, a flood that fails to trip the bucket or A8, or a reaction that resurrects a trimmed row |
-| UX-03 Screen state machine and session slots | Panel container, S0 to S5 transitions, `active` and `pending` slots, migration strip, focus moves, `gate.py` (case `nav`) | Core | `python3 03-build/output/probes/gate.py nav` | A back path into a live session, a composer that unlocks during migration, or two session slots that can both be live |
+| UX-03 Screen state machine and session slots | Panel container, S0 to S4 transitions plus two sheets, `active` and `pending` slots, migration strip, focus moves, `gate.py` (case `nav`) | Core | `python3 03-build/output/probes/gate.py nav` | A back path into a live session, a composer that unlocks during migration, or two session slots that can both be live |
 | UX-04 Verification panel and crypto status | SAS panel, 60 digit render, confirm and mismatch, peer confirm gate, status chips, ratchet age, aging banner, `gate.py` (case `sas-ui`) | Core | `python3 03-build/output/probes/gate.py sas-ui` | A composer that unlocks before the peer confirms, a "verified" label before both confirms, or a session id or key byte reaching the DOM |
 | UX-05 Pairing panel states | Paste, parse, preview, TTL countdown, single use, error strings, show and regenerate, `gate.py` (case `pair`) | Core | `python3 03-build/output/probes/gate.py pair` | A stale or reused code that still pairs, or an error that leaks decoded SDP or candidates |
 | UX-06 Wipe and panic | Always-enabled button, confirm rules, double Escape, layer rule, ended panel, countdowns, `gate.py` (case `panic`) | Core | `python3 03-build/output/probes/gate.py panic` | Wipe disabled before connect, Escape in a picker that wipes the session, or an ended panel that shows a session id |
@@ -513,7 +513,7 @@ Re-read the file end to end after the last edit and ran the checks below. Result
 | 3 | Idempotency and both-sides sync are specified | PASS | Section 1.4 gives the state shape `Map<mid, Map<shortcode, {me, peer}>>`, the assignment apply rule, the single-writer argument, the no-echo rule, and the ordered reliable channel as the reason replay converges. |
 | 4 | Per-message caps and per-second limits make reaction spam a non-DoS, consistent with the audit | PASS | Section 1.5: DOM cost is one pill per distinct shortcode, not one node per reaction, so F-06's unbounded DOM cannot be reached through reactions; frame processing is bounded by a 20 token bucket refilling at 4 per second, with A8 as the backstop and A1 as the unknown-value backstop. |
 | 5 | Reactions die with the session, no persistence | PASS | Section 1.7 table covers reload, `pagehide`, Kill, Rotate, Migrate and log trim. Rotate keeps them and the table says why. No storage API appears anywhere in the design. |
-| 6 | Navigation is defined for an ephemeral one-to-one chat | PASS | Section 2.1 lists the three normal navigation jobs that cannot exist and sources each. Section 2.2 is the S0 to S5 screen map with entry, contents, and deliberate absences. |
+| 6 | Navigation is defined for an ephemeral one-to-one chat | PASS | Section 2.1 lists the three normal navigation jobs that cannot exist and sources each. Section 2.2 is the S0 to S4 screen map with two sheets, entry, contents, and deliberate absences. |
 | 7 | The session manager pairs with the M1 to M5 migration protocol | PASS | Section 2.3 has the two slots `active` and `pending`, the M1 to M5 UI strip table with the 15 s timeout and the composer lock, and the Rotate versus New session naming. |
 | 8 | Pairing UX covers QR versus pasted code with a verdict | PASS | Section 2.4 has the capacity table (version 20 M 666 bytes, 22 M 779, 23 M 857, 25 M 997, 35 M 1809), the module formula, and the three option table. Verdict: paste default and universal, QR display EXEC-ONLY by choice below 997 bytes, scan EXEC-ONLY, never QR-only. The accessibility argument is stated. |
 | 9 | Crypto status surface shows ratchet age and the safety-number verification state | PASS | Section 2.5 defines the Worker status message, the four header chips, `rekeyAge` versus `dhAge`, the 20 minute aging banner, the both-confirms composer gate, and the never-shown list (session id, key bytes, peer address). |

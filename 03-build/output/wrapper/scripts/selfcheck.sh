@@ -13,7 +13,7 @@ fail() { printf 'FAIL %s\n' "$1"; status=1; }
 echo "== 1. inventory"
 for file in package.json main.cjs preload.cjs menu.cjs qr.cjs fuses.json BUILD.md SELF-CHECK.md \
   scripts/fuses.sh scripts/hash-artifacts.sh scripts/sign-hashes.sh scripts/verify-artifacts.sh \
-  scripts/pin-core.sh scripts/selfcheck.sh; do
+  scripts/pin-core.sh scripts/selfcheck.sh scripts/build-gate.sh scripts/e2e-core-load.sh; do
   if [ -f "$here/$file" ]; then pass "exists $file"; else fail "missing $file"; fi
 done
 
@@ -303,6 +303,91 @@ then
   pass "BC-W4 pin shape"
 else
   fail "BC-W4 pin shape"
+fi
+
+echo "== 15. shell repair surface, P-01 P-09 P-12 P-13"
+if python3 - "$here/main.cjs" "$here/preload.cjs" "$here/menu.cjs" <<'PY'
+import sys
+
+main = open(sys.argv[1], "r", encoding="ascii").read()
+preload = open(sys.argv[2], "r", encoding="ascii").read()
+menu = open(sys.argv[3], "r", encoding="ascii").read()
+problems = []
+
+required_main = [
+    "coreSession.protocol.handle('app'",
+    "function isCoreUrl(",
+    "url.protocol === 'app:'",
+    "url.hostname === 'core'",
+    "will-download",
+    "item.setSavePath(",
+    "DOWNLOAD_TYPES",
+    "function isBlankNavigation(",
+    "url === 'about:blank'",
+    "if (focused) clipboard.clear()",
+    "BUILD_HASH_OK",
+    "UNVERIFIED (development run, not a release build)",
+]
+for item in required_main:
+    if item not in main:
+        problems.append("main.cjs missing " + item)
+
+banned_main = [
+    "url.origin !== CORE_ORIGIN",
+    "\n  protocol.handle('app'",
+]
+for item in banned_main:
+    if item in main:
+        problems.append("main.cjs still has " + item)
+if "clipboard.clear();" in main and "if (focused) clipboard.clear();" not in main:
+    problems.append("clipboard clear is not behind the focus gate")
+
+if "new-invite" in preload or "rotate-keys" in preload:
+    problems.append("preload carries a second command list")
+if "new Set([" in preload:
+    problems.append("preload builds a second command set")
+if "'wipe'" not in menu:
+    problems.append("menu COMMANDS does not include wipe")
+
+if problems:
+    print("; ".join(problems))
+    sys.exit(1)
+print("core partition handler, app scheme predicate, download sink, about:blank predicate, focus gated clipboard, release hash gate, one COMMANDS source")
+PY
+then
+  pass "P-01 P-09 P-12 P-13 static surface"
+else
+  fail "P-01 P-09 P-12 P-13 static surface"
+fi
+
+echo "== 16. build gate behaviour"
+gate_hash=$(printf 'a%.0s' $(seq 1 64))
+gate_out="${TMPDIR:-/tmp}/build-gate.$$"
+if EPHEMERAL_BUILD_HASH="$gate_hash" sh "$here/scripts/build-gate.sh" >"$gate_out" 2>&1; then
+  pass "build gate accepts a 64 hex hash and the pinned core"
+elif grep -q "does not carry the current core hash" "$gate_out"; then
+  pass "build gate refused a core pin mismatch (pin is committed at integration)"
+else
+  fail "build gate refused a valid release posture"
+  cat "$gate_out"
+fi
+rm -f "$gate_out"
+if EPHEMERAL_BUILD_HASH="" sh "$here/scripts/build-gate.sh" >/dev/null 2>&1; then
+  fail "build gate accepted an unset hash"
+else
+  pass "build gate refuses an unset hash"
+fi
+if EPHEMERAL_BUILD_HASH="not-a-hash" sh "$here/scripts/build-gate.sh" >/dev/null 2>&1; then
+  fail "build gate accepted a malformed hash"
+else
+  pass "build gate refuses a malformed hash"
+fi
+
+echo "== 17. P-01 live core load, optional"
+if [ -n "${ELECTRON_BIN:-}" ]; then
+  if sh "$here/scripts/e2e-core-load.sh"; then pass "live app://core load on the stock framework"; else fail "live app://core load"; fi
+else
+  echo "SKIP live run, set ELECTRON_BIN to the stock or packaged Electron binary"
 fi
 
 echo

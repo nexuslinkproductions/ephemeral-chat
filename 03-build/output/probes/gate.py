@@ -547,6 +547,10 @@ SHIM = r"""
     if (!P.peers.length) { return null; }
     try { return P.peers[0].pc.getConfiguration().iceServers || []; } catch (e) { return null; }
   };
+  P.iceConfig = function () {
+    if (!P.peers.length) { return null; }
+    try { return P.peers[0].pc.getConfiguration(); } catch (e) { return null; }
+  };
   window.__probe = P;
 })();
 """
@@ -1680,33 +1684,52 @@ def case_stun(app, opts):
 
 
 def case_cover(app, opts):
-    """R2-13: no relay in the default artifact, relay-only policy leaks no host or srflx."""
+    """R2-13: the shipped artifact carries no relay, a relay config makes the
+    app relay only, and an unreachable relay fails closed with no invite.
+
+    This drives the app's own relay mode. The old synthetic RTCPeerConnection
+    probe measured Chromium, not this artifact, and is not counted here.
+    """
     host = opts.get('relay_host')
     if not host:
         raise CannotRun('--relay-host is required, for example turn:127.0.0.1:5349')
     text = app_text(app)
     expect(not re.search(r'turns?:', text), 'default artifact carries a relay URL')
     expect(host not in text, 'default artifact carries the supplied relay host')
+    expect('iceTransportPolicy' in text, 'the artifact has no relay only ICE policy path')
     b = Browser()
     try:
         p = b.page(b.context())
-        p.goto('about:blank')
-        p.js("""(() => {
-          window.__c = { list: [] };
-          window.__pc = new RTCPeerConnection({
-            iceServers: [{ urls: %s, username: 'probe', credential: 'probe' }],
-            iceTransportPolicy: 'relay'
-          });
-          window.__pc.onicecandidate = function (e) { if (e.candidate) { window.__c.list.push(e.candidate.candidate); } };
-          window.__pc.createDataChannel('x');
-          return window.__pc.createOffer()
-            .then(function (o) { return window.__pc.setLocalDescription(o); })
-            .then(function () { return true; });
-        })()""" % jsval(host))
-        time.sleep(5)
-        cands = p.js('window.__c.list') or []
-        bad = [x for x in cands if 'typ host' in x or 'typ srflx' in x]
-        expect(not bad, 'relay-only policy emitted host or srflx candidates: %r' % (bad[:2],))
+        p.init(SHIM)
+        query = '?relay=' + urllib.parse.quote(host, safe='') + '&relayUser=probe&relayCred=probe'
+        p.goto(app_url(app) + query)
+        wait_enabled(p, '#create')
+        click(p, '#create')
+        p.wait("(() => !!(window.__probe && window.__probe.iceConfig()))()",
+               timeout=20, what='relay ICE configuration')
+        conf = p.js("window.__probe.iceConfig()")
+        if not isinstance(conf, dict):
+            raise Fail('the app did not expose its ICE configuration: %r' % (conf,))
+        urls = []
+        for entry in conf.get('iceServers') or []:
+            u = entry.get('urls') if isinstance(entry, dict) else None
+            if isinstance(u, str):
+                urls.append(u)
+            elif isinstance(u, list):
+                urls.extend(u)
+        expect(urls == [host], 'relay mode did not use only the supplied relay: %r' % (urls,))
+        expect(conf.get('iceTransportPolicy') == 'relay',
+               'relay mode did not force iceTransportPolicy relay: %r' % (conf,))
+        # The loopback relay does not answer, so no typ relay candidate can be
+        # gathered. The app must refuse the invite and name the failure. A
+        # silent fall back to a direct path would show up as an invite here.
+        p.wait("(() => { const t = document.querySelector('#toast');"
+               " return !!t && !t.hidden && /relay unreachable/i.test(t.textContent); })()",
+               timeout=25, what='relay unreachable refusal')
+        expect(p.js("document.querySelector('#offer').value") == '',
+               'a relay only invite was issued with no relay candidate')
+        expect_eq(p.js("document.querySelector('#status').textContent"), 'error',
+                  'the relay failure did not move the app to the error state')
     finally:
         b.close()
 

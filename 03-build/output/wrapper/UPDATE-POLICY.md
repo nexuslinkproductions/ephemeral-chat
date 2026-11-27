@@ -8,7 +8,8 @@ download page and the About panel are allowed to claim.
 - The app performs no update check, no version ping and no notification, at any interval,
   on any trigger. There is no code path in the wrapper that opens a socket for updates.
 - A download may happen only by the user's own action in a browser. The app never downloads
-  an update, and it may not install one.
+  an update, and it may not install one. The one download sink in the shell is the received
+  file export: fixed type allowlist, fixed app owned directory, never a network update.
 - Replacement is manual and hash verified. Steps 1 to 4 in blueprint 6.1 are the protocol:
   publish the SHA-256 of every artifact in two independent channels, publish a detached
   minisign or cosign signature over the hash list, give the verify command per platform, and

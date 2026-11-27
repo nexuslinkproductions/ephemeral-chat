@@ -1,7 +1,8 @@
 #!/bin/sh
 # BC-W7: detached signature over SHA256SUMS. minisign by default, cosign with SIGNER=cosign.
-# The private key never lives in the repository. The public key ships in the repo and in the
-# About panel, so a verifier needs nothing from the release page.
+# The private key never lives in the repository. The public key ships in the repository next
+# to the release notes; About shows both hashes, not the key. Verify with the key file as the
+# third argument to verify-artifacts.sh.
 # Usage: sh scripts/sign-hashes.sh <SHA256SUMS> [secret-key]
 set -eu
 

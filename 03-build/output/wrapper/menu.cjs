@@ -11,8 +11,9 @@
 
 const { Menu } = require('electron');
 
-// The only command ids main may send. The preload enforces the same set on its side.
-const COMMANDS = Object.freeze(['new-invite', 'new-session', 'rotate-keys', 'diagnostics']);
+// The only command ids in the tree. main sendCommand validates against this list, and the
+// preload forwards without a second copy. 'wipe' is sent by the kill path, not by a menu item.
+const COMMANDS = Object.freeze(['new-invite', 'new-session', 'rotate-keys', 'diagnostics', 'wipe']);
 
 function buildMenu({ isDev, sendCommand, onWipe, onAbout }) {
   const template = [

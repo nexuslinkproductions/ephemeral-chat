@@ -1145,6 +1145,8 @@ self.onmessage = function (ev) {
   const IDLE_MS = 30 * 60 * 1000;
   const IDLE_CHECK_MS = 15000;
   const TRANSFER_IDLE_MS = 60000;
+  const FIRST_CHUNK_MS = 5000;
+  const MIG_MAX = 6;
   const IMAGE_MAX_PX = 60000000;
   const IMAGE_LONG_EDGE = 1600;
   const IMAGE_TARGET = 350 * 1024;
@@ -1168,11 +1170,33 @@ self.onmessage = function (ev) {
     ['wave', '\u{1F44B}'], ['muscle', '\u{1F4AA}'], ['salute', '\u{1F44F}']
   ];
   const PALETTE_MAP = new Map(PALETTE);
-  const ICE = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'stun:stun.nextcloud.com:443' }
-  ];
+  // R2-13 cover mode, opt in at load. A relay URL in the query turns this page
+  // into a relay only build: only that relay is offered, no host or server
+  // reflexive candidate is used, and no code is issued unless a relay candidate
+  // was gathered. No query keeps the stock STUN only build. The shipped file
+  // carries no relay host and no relay URL.
+  function relayConfig() {
+    let params;
+    try { params = new URLSearchParams(location.search); } catch (_) { return null; }
+    const url = String(params.get('relay') || '').trim();
+    if (!url) return null;
+    const cut = url.indexOf(':');
+    const scheme = cut > 0 ? url.slice(0, cut).toLowerCase() : '';
+    if ((scheme !== 'turn' && scheme !== 'turns') || url.length > 512) return { bad: true };
+    return {
+      urls: url,
+      username: String(params.get('relayUser') || '').slice(0, 128),
+      credential: String(params.get('relayCred') || '').slice(0, 128)
+    };
+  }
+  const RELAY = relayConfig();
+  const ICE = RELAY
+    ? (RELAY.bad ? [] : [{ urls: RELAY.urls, username: RELAY.username, credential: RELAY.credential }])
+    : [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun.cloudflare.com:3478' },
+      { urls: 'stun:stun.nextcloud.com:443' }
+    ];
 
   const el = {
     status: $('status'),
@@ -1270,6 +1294,7 @@ self.onmessage = function (ev) {
   let peerFp = '';
   let mig = null;
   let migTimer = 0;
+  let migAttempts = 0;
   let escAt = 0;
   let webpOk = null;
   let offerIssuedAt = 0;
@@ -1639,7 +1664,15 @@ self.onmessage = function (ev) {
     return m ? m.length : 0;
   }
 
+  function relayCount(sdp) {
+    const m = String(sdp || '').match(/^a=candidate:.* typ relay/gm);
+    return m ? m.length : 0;
+  }
+
   function assertCandidates(sdp) {
+    if (RELAY && relayCount(sdp) < 1) {
+      throw new Error('Relay unreachable: this page is relay only, so no direct connection was attempted and no code was issued.');
+    }
     if (candidateCount(sdp) < 1) {
       throw new Error('Network blocked: no ICE candidate was gathered. A firewall or VPN may be filtering WebRTC.');
     }
@@ -1710,7 +1743,7 @@ self.onmessage = function (ev) {
   function dangerType(type, name) {
     const t = String(type || '').toLowerCase();
     if (t === 'text/html' || t === 'application/xhtml+xml' || t === 'image/svg+xml') return true;
-    return /\.(exe|scr|bat|cmd|com|pif|msi|ps1|sh|app|jar|vbs|js)$/i.test(String(name || ''));
+    return /\.(exe|scr|bat|cmd|com|pif|msi|ps1|sh|app|jar|vbs|js|lnk|desktop|url|hta|docm|xlsm|reg|scf)$/i.test(String(name || ''));
   }
 
   function closePeer() {
@@ -1786,6 +1819,7 @@ self.onmessage = function (ev) {
     sending = false;
     sendQueue = Promise.resolve();
     el.log.replaceChildren();
+    el.digits.replaceChildren();
     el.offer.value = '';
     el.answer.value = '';
     el.offerIn.value = '';
@@ -1895,6 +1929,14 @@ self.onmessage = function (ev) {
   function checkTransferTimeout() {
     if (phase === 'ended') return;
     const now = Date.now();
+    if (incoming && incoming.offset === 0 && now - incoming.startedAt > FIRST_CHUNK_MS) {
+      const cur = incoming;
+      incoming = null;
+      call('fileAbort', { id: cur.id }).catch(() => {});
+      cur.card.error('no first chunk');
+      addSystem('A file start sent no first chunk in time and was discarded.');
+      return;
+    }
     if (incoming && now - lastProgress > TRANSFER_IDLE_MS) {
       const cur = incoming;
       incoming = null;
@@ -1905,7 +1947,8 @@ self.onmessage = function (ev) {
   }
 
   function newPeer(opts) {
-    const peer = new RTCPeerConnection({ iceServers: ICE });
+    const config = RELAY ? { iceServers: ICE, iceTransportPolicy: 'relay' } : { iceServers: ICE };
+    const peer = new RTCPeerConnection(config);
     // A pending migration peer is not the live peer: its own channel creation and
     // its startup connection states must not end or alarm the live session.
     peer.addEventListener('connectionstatechange', () => {
@@ -2246,10 +2289,12 @@ self.onmessage = function (ev) {
 
   function onFileStart(msg) {
     if (incoming) {
+      const held = incoming;
+      incoming = null;
       droppedFrames++;
       anomaly('A4 overlapping transfers');
-      call('fileAbort', { id: msg.id }).catch(() => {});
-      return;
+      call('fileAbort', { id: held.id }).catch(() => {});
+      held.card.error('superseded');
     }
     const size = Number(msg.size);
     const chunks = Number(msg.chunks);
@@ -2272,7 +2317,7 @@ self.onmessage = function (ev) {
     const name = cleanName(msg.name);
     const type = String(msg.type || 'application/octet-stream').slice(0, 120);
     const card = createFileCard(name, size, false, type);
-    incoming = { id: String(msg.id), size: size, chunks: chunks, offset: 0, card: card, name: name, type: type };
+    incoming = { id: String(msg.id), size: size, chunks: chunks, offset: 0, card: card, name: name, type: type, startedAt: Date.now() };
     lastProgress = Date.now();
   }
 
@@ -2747,7 +2792,13 @@ self.onmessage = function (ev) {
     const encoder = new VideoEncoder({
       output(chunk, meta) {
         if (!firstMeta) firstMeta = meta;
-        muxer.addVideoChunk(chunk, meta);
+        // F-ENV-1: a null chunk duration throws inside the muxer when engine A
+        // runs on a browser that leaves it unset. One frame at 30 fps is the
+        // honest fallback for a sample that did not carry its own.
+        const dur = Number.isFinite(chunk.duration) && chunk.duration > 0 ? chunk.duration : 33333;
+        const bytes = new Uint8Array(chunk.byteLength);
+        chunk.copyTo(bytes);
+        muxer.addVideoChunkRaw(bytes, chunk.type, chunk.timestamp, dur, meta);
       },
       error(e) { encError = e; }
     });
@@ -2914,7 +2965,14 @@ self.onmessage = function (ev) {
         const retry = Math.max(120000, Math.round(plan.bitrate * (VIDEO_CAP / blob.size) * 0.95));
         addSystem('The first encode reached ' + formatSize(blob.size) + ', over the 45 MB cap. Retrying once at a lower bitrate.');
         const plan2 = Object.assign({}, plan, { bitrate: retry });
-        out = await transcodeA(file, plan2, draft.progress);
+        try {
+          out = await transcodeA(file, plan2, draft.progress);
+        } catch (error) {
+          if (phase === 'ended') throw error;
+          addSystem('The lower bitrate retry could not use WebCodecs (' + (error && error.message ? error.message : 'failed') + '). Falling back to MediaRecorder.');
+          draft.state('encoding with MediaRecorder');
+          out = await transcodeB(file, plan2, draft.progress);
+        }
         blob = out.blob;
         if (blob.size > VIDEO_CAP) {
           throw new Error('the result is still ' + formatSize(blob.size) + ' after one retry, so it was not sent');
@@ -3030,6 +3088,7 @@ self.onmessage = function (ev) {
   async function createInvite() {
     if (phase === 'ended') return;
     el.create.disabled = true;
+    migAttempts = 0;
     closePeer();
     phase = 'pairing';
     showScreen('S1');
@@ -3084,6 +3143,7 @@ self.onmessage = function (ev) {
   async function joinSession() {
     if (phase === 'ended') return;
     el.join.disabled = true;
+    migAttempts = 0;
     closePeer();
     phase = 'pairing';
     showScreen('S1');
@@ -3271,7 +3331,7 @@ self.onmessage = function (ev) {
   }
 
   async function startMigrate() {
-    if (phase !== 'live' || mig) {
+    if (phase !== 'live') {
       toast('Not now');
       return;
     }
@@ -3279,6 +3339,12 @@ self.onmessage = function (ev) {
       toast('Finish the transfer first');
       return;
     }
+    if (migAttempts >= MIG_MAX) {
+      toast('The migration attempt limit for this session was reached');
+      return;
+    }
+    if (mig) migDrop();
+    migAttempts++;
     phase = 'migrating';
     el.input.disabled = true;
     el.send.disabled = true;
@@ -3286,10 +3352,11 @@ self.onmessage = function (ev) {
     el.rotate.disabled = true;
     el.migrate.disabled = true;
     setStatus('migrating', 'wait');
+    let pcNew = null;
     try {
       const keys = await call('migKeys');
       const sidNew = randomHex(16);
-      const pcNew = newPeer();
+      pcNew = newPeer();
       const dcNew = pcNew.createDataChannel('chat', { ordered: true });
       const offer = await pcNew.createOffer();
       await pcNew.setLocalDescription(offer);
@@ -3309,9 +3376,11 @@ self.onmessage = function (ev) {
       el.log.classList.add('locked');
       bindPending(dcNew, m);
       await sendControl({ k: 'mig', step: 'offer', nsid: sidNew, fp: fp, code: code });
+      clearTimeout(migTimer);
       migTimer = setTimeout(() => migFail('timeout'), 15000);
       addSystem('Migration started. Waiting for the other side.');
     } catch (e) {
+      try { if (pcNew && mig === null) pcNew.close(); } catch (_) {}
       migFail(e && e.message ? e.message : 'failed');
     }
   }
@@ -3322,10 +3391,12 @@ self.onmessage = function (ev) {
       addSystem('Peer offered a migration during a transfer. It was refused.');
       return;
     }
-    if (mig && mig.role === 'offer') {
-      if (mig.selfFp < String(msg.fp)) return;
-      migDrop();
+    if (migAttempts >= MIG_MAX) {
+      addSystem('A migration offer was refused: the attempt limit for this session was reached.');
+      return;
     }
+    if (mig) migDrop();
+    migAttempts++;
     phase = 'migrating';
     el.input.disabled = true;
     el.send.disabled = true;
@@ -3333,13 +3404,14 @@ self.onmessage = function (ev) {
     el.rotate.disabled = true;
     el.migrate.disabled = true;
     setStatus('migrating', 'wait');
+    let pcNew = null;
     try {
       const env = await unpackCode(String(msg.code || ''));
       const nsid = String(msg.nsid || '');
       if (env.sid !== nsid) throw new Error('session id mismatch');
       const keys = await call('migKeys');
       if (keys.suite !== env.suite) throw new Error('suite mismatch');
-      const pcNew = newPeer({ onChannel: (ch) => { if (mig) bindPending(ch, mig); } });
+      pcNew = newPeer({ onChannel: (ch) => { if (mig) bindPending(ch, mig); } });
       await pcNew.setRemoteDescription({ type: 'offer', sdp: env.sdp });
       const answer = await pcNew.createAnswer();
       await pcNew.setLocalDescription(answer);
@@ -3359,9 +3431,11 @@ self.onmessage = function (ev) {
       el.strip.textContent = 'Preparing a new session, step 2 of 4.';
       el.log.classList.add('locked');
       await sendControl({ k: 'mig', step: 'answer', nsid: m.sid, fp: fp, code: code, check: check });
+      clearTimeout(migTimer);
       migTimer = setTimeout(() => migFail('timeout'), 15000);
       addSystem('Peer started a migration. Answer sent.');
     } catch (e) {
+      try { if (pcNew && mig === null) pcNew.close(); } catch (_) {}
       migFail(e && e.message ? e.message : 'failed');
     }
   }
@@ -3525,7 +3599,7 @@ self.onmessage = function (ev) {
     endSession('wipe');
   }
 
-  // UX-03: one screen at a time, S0 to S5, no router and no history entries.
+  // UX-03: one screen at a time, S0 to S4 plus the gallery and about sheets, no router and no history entries.
   function showScreen(name) {
     document.body.dataset.screen = name;
     const chat = name === 'S2' || name === 'S3';
@@ -3703,6 +3777,18 @@ self.onmessage = function (ev) {
   el.wipe.addEventListener('click', wipeNow);
   el.rotate.addEventListener('click', doRotate);
   el.migrate.addEventListener('click', startMigrate);
+  // WB-01 and the shell kill contract: main sends the wipe command 300 ms
+  // before hardKill and preload forwards it as a page message. The listener
+  // only exists when the preload bridge is present, so the file stays a plain
+  // page in a browser. endSession posts the panic frame on the live channel.
+  if (window.shell) {
+    addEventListener('message', (event) => {
+      if (event.source !== window) return;
+      const data = event.data;
+      if (!data || data.channel !== 'ephemeral:command' || data.id !== 'wipe') return;
+      if (phase !== 'ended') endSession('wipe');
+    });
+  }
   el.confirmSas.addEventListener('click', confirmSas);
   el.badSas.addEventListener('click', rejectSas);
   el.restart.addEventListener('click', () => location.reload());
@@ -3795,7 +3881,7 @@ self.onmessage = function (ev) {
   });
 
   idleTimer = setInterval(checkIdle, IDLE_CHECK_MS);
-  transferTimer = setInterval(checkTransferTimeout, 5000);
+  transferTimer = setInterval(checkTransferTimeout, 1000);
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) checkIdle();

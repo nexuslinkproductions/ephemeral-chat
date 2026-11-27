@@ -6,13 +6,10 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-const COMMANDS = new Set(['new-invite', 'new-session', 'rotate-keys', 'diagnostics', 'wipe']);
-
-// Main to page direction. postMessage crosses the isolated world boundary through the DOM,
-// so the page gets a plain message event and contextBridge stays at two verbs. BC-W3 denies
-// every window and frame, so this document is the only possible source.
+// The only command ids live in menu.cjs, which main uses to validate before sending. The
+// preload validates the shape only: one COMMANDS source, no second list to drift (P-13).
 ipcRenderer.on('shell:command', (event, id) => {
-  if (typeof id !== 'string' || !COMMANDS.has(id)) return;
+  if (typeof id !== 'string' || id.length < 1 || id.length > 32) return;
   window.postMessage({ channel: 'ephemeral:command', id }, '*');
 });
 
