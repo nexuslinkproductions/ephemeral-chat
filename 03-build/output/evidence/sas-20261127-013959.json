@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": 164370,
+  "app_sha256": "7c6c345258e586e931abf43906c7acb1eedfa737f22ab8aada7032f706a213c1",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "sas",
+    "--app",
+    "03-build/output/ephemeral-chat-v2.html"
+  ],
+  "case": "sas",
+  "detail": "composer did not unlock after both confirms",
+  "duration_s": 23.45,
+  "exit": 1,
+  "run": "2026-11-27T01:39:59+0100"
+}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; worker-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; worker-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Cache-Control" content="no-store">
 <title>Ephemeral chat</title>
@@ -368,6 +368,135 @@
     z-index: 10;
   }
 
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .chips { display: flex; align-items: center; gap: 6px; margin-left: 10px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .chip[data-tone="ok"] { color: var(--ok); border-color: #235c3f; }
+  .chip[data-tone="wait"] { color: var(--wait); border-color: #5c4a24; }
+  .chip[data-tone="err"] { color: var(--danger); border-color: #5c2a2a; }
+
+  .strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px max(20px, calc((100% - 760px) / 2));
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
+    font-size: 12px;
+    color: var(--wait);
+  }
+  .aging { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--wait); }
+  .log.locked .msg { opacity: .55; }
+
+  .msg { position: relative; }
+  .pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+  .pill[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .pill .n { color: var(--muted); }
+  .react-add {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--faint);
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-size: 12px;
+    opacity: 0;
+  }
+  .msg:hover .react-add, .react-add:focus-visible { opacity: 1; }
+  .palette {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  }
+  .palette button { border: 0; background: transparent; font-size: 17px; padding: 2px 4px; border-radius: 5px; }
+  .palette button:hover { background: var(--surface); }
+
+  .sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px;
+    background: var(--bg);
+    overflow-y: auto;
+  }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .sheet-head h2 { margin: 0; font-size: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .tile img, .tile video { width: 100%; height: 110px; object-fit: cover; border-radius: 5px; background: var(--bg); }
+  .tile .tile-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile .tile-actions { display: flex; gap: 6px; }
+  .draft { border-color: #3d4a63; }
+  .draft-line { font-size: 12px; color: var(--wait); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-2: #eef1f5;
+      --line: #d4d9e0;
+      --line-soft: #e3e7ec;
+      --text: #16191d;
+      --muted: #555d68;
+      --faint: #5f6772;
+      --accent: #2456c8;
+      --accent-soft: #dde7ff;
+      --danger: #b42323;
+      --ok: #10703f;
+      --wait: #7a5300;
+    }
+    .btn.primary { color: #ffffff; }
+    .btn.primary:hover:not(:disabled) { background: #1c46a8; border-color: #1c46a8; }
+    #chat.drag::after { background: rgba(246, 247, 249, .8); }
+  }
+
   @media (max-width: 720px) {
     .cols { grid-template-columns: 1fr; }
     .msg { max-width: 88%; }
@@ -379,6 +508,13 @@
 <header>
   <div class="brand"><span class="mark"></span>ephemeral</div>
   <div class="status" id="status" role="status">not connected</div>
+  <div class="chips" id="chips" hidden>
+    <span class="chip" id="chipVerify" data-tone="wait">unverified</span>
+    <span class="chip" id="chipSuite">suite</span>
+    <span class="chip" id="chipRatchet">keys new</span>
+    <button class="chip" id="chipFiles" type="button">Files 0</button>
+    <button class="chip" id="chipAbout" type="button">About</button>
+  </div>
   <div class="tools">
     <button class="btn ghost small" id="rotate" type="button" disabled>Rotate keys</button>
     <button class="btn ghost small" id="migrate" type="button" disabled>New session</button>
@@ -404,6 +540,7 @@
           <div class="field-head"><span>Invite code</span><span class="field-tools"><button class="btn ghost small" id="showOffer" type="button" disabled>Show</button><button class="btn ghost small" id="copyOffer" type="button" disabled>Copy</button></span></div>
           <textarea id="offer" readonly placeholder="Your invite code appears here" spellcheck="false" aria-label="Invite code"></textarea>
         </div>
+        <p class="fine" id="offerTtl">No code yet.</p>
         <div class="field">
           <div class="field-head"><span>Their reply</span></div>
           <textarea id="answerIn" placeholder="Paste the reply code here" spellcheck="false" aria-label="Their reply"></textarea>
@@ -418,6 +555,7 @@
           <div class="field-head"><span>Invite code</span></div>
           <textarea id="offerIn" placeholder="Paste the invite code here" spellcheck="false" aria-label="Invite code"></textarea>
         </div>
+        <p class="fine" id="pairState" aria-live="polite"></p>
         <button class="btn" id="join" type="button">Create reply</button>
         <div class="field">
           <div class="field-head"><span>Your reply</span><span class="field-tools"><button class="btn ghost small" id="showAnswer" type="button" disabled>Show</button><button class="btn ghost small" id="copyAnswer" type="button" disabled>Copy</button></span></div>
@@ -428,6 +566,7 @@
   </section>
 
   <section id="chat" hidden>
+    <div class="strip" id="strip" hidden>Preparing a new session.</div>
     <div class="verify" id="verify" hidden>
       <div class="verify-head"><span>Safety number</span><span class="suite" id="suite">suite</span></div>
       <div class="digits" id="digits" aria-label="Safety number"></div>
@@ -437,6 +576,11 @@
         <button class="btn small" id="badSas" type="button">It does not match</button>
       </div>
       <div class="route" id="route"></div>
+      <div class="aging" id="aging" hidden>
+        <span>Session is old. Rotate keys?</span>
+        <button class="btn ghost small" id="agingRotate" type="button">Rotate</button>
+        <button class="btn ghost small" id="agingLater" type="button">Later</button>
+      </div>
     </div>
     <div class="log" id="log" role="log" aria-live="polite">
       <div class="empty" id="empty">Connected. Nothing is being saved.</div>
@@ -461,6 +605,27 @@
 </footer>
 
 <div class="toast" id="toast" role="status" hidden></div>
+
+<section class="sheet" id="gallery" hidden aria-label="Media gallery">
+  <div class="sheet-head"><h2>Files in this session</h2><button class="btn ghost small" id="galleryClose" type="button">Close</button></div>
+  <div class="grid" id="galleryGrid"></div>
+  <p class="fine" id="galleryNote"></p>
+</section>
+
+<section class="sheet" id="about" hidden aria-label="About and diagnostics">
+  <div class="sheet-head"><h2>About and diagnostics</h2><button class="btn ghost small" id="aboutClose" type="button">Close</button></div>
+  <p>The safety number proves that the two apps derived the same keys, not who the other person is. A malicious browser extension can read this page. Nothing here is written to disk.</p>
+  <p class="fine" id="aboutDiag"></p>
+</section>
+
+<!-- R2-18: mp4-muxer 5.2.2, vendored build, 31,133 B minified (blueprint pin 31,103 B plus the 30 B global export assignment). -->
+<script>
+(()=>{var Ee=(e,t,s)=>{if(!t.has(e))throw TypeError("Cannot "+s)},i=(e,t,s)=>(Ee(e,t,"read from private field"),s?s.call(e):t.get(e)),d=(e,t,s)=>{if(t.has(e))throw TypeError("Cannot add the same private member more than once");t instanceof WeakSet?t.add(e):t.set(e,s)},T=(e,t,s,r)=>(Ee(e,t,"write to private field"),r?r.call(e,s):t.set(e,s),s),st=(e,t,s,r)=>({set _(a){T(e,t,a,s)},get _(){return i(e,t,r)}}),m=(e,t,s)=>(Ee(e,t,"access private method"),s),p=new Uint8Array(8),B=new DataView(p.buffer),C=e=>[(e%256+256)%256],c=e=>(B.setUint16(0,e,!1),[p[0],p[1]]),rt=e=>(B.setInt16(0,e,!1),[p[0],p[1]]),Ve=e=>(B.setUint32(0,e,!1),[p[1],p[2],p[3]]),n=e=>(B.setUint32(0,e,!1),[p[0],p[1],p[2],p[3]]),at=e=>(B.setInt32(0,e,!1),[p[0],p[1],p[2],p[3]]),V=e=>(B.setUint32(0,Math.floor(e/2**32),!1),B.setUint32(4,e,!1),[p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7]]),ze=e=>(B.setInt16(0,2**8*e,!1),[p[0],p[1]]),A=e=>(B.setInt32(0,2**16*e,!1),[p[0],p[1],p[2],p[3]]),we=e=>(B.setInt32(0,2**30*e,!1),[p[0],p[1],p[2],p[3]]),E=(e,t=!1)=>{let s=Array(e.length).fill(null).map((r,a)=>e.charCodeAt(a));return t&&s.push(0),s},le=e=>e&&e[e.length-1],Ae=e=>{let t;for(let s of e)(!t||s.presentationTimestamp>t.presentationTimestamp)&&(t=s);return t},O=(e,t,s=!0)=>{let r=e*t;return s?Math.round(r):r},Pe=e=>{let t=e*(Math.PI/180),s=Math.cos(t),r=Math.sin(t);return[s,r,0,-r,s,0,0,0,1]},je=Pe(0),$e=e=>[A(e[0]),A(e[1]),we(e[2]),A(e[3]),A(e[4]),we(e[5]),A(e[6]),A(e[7]),we(e[8])],K=e=>!e||typeof e!="object"?e:Array.isArray(e)?e.map(K):Object.fromEntries(Object.entries(e).map(([t,s])=>[t,K(s)])),H=e=>e>=0&&e<2**32,g=(e,t,s)=>({type:e,contents:t&&new Uint8Array(t.flat(10)),children:s}),w=(e,t,s,r,a)=>g(e,[C(t),Ve(s),r??[]],a),nt=e=>{let t=512;return e.fragmented?g("ftyp",[E("iso5"),n(t),E("iso5"),E("iso6"),E("mp41")]):g("ftyp",[E("isom"),n(t),E("isom"),e.holdsAvc?E("avc1"):[],E("mp41")])},ve=e=>({type:"mdat",largeSize:e}),ot=e=>({type:"free",size:e}),re=(e,t,s=!1)=>g("moov",null,[ht(t,e),...e.map(r=>lt(r,t)),s?Lt(e):null]),ht=(e,t)=>{let s=O(Math.max(0,...t.filter(h=>h.samples.length>0).map(h=>{let f=Ae(h.samples);return f.presentationTimestamp+f.duration})),ye),r=Math.max(...t.map(h=>h.id))+1,a=!H(e)||!H(s),o=a?V:n;return w("mvhd",+a,0,[o(e),o(e),n(ye),o(s),A(1),ze(1),Array(10).fill(0),$e(je),Array(24).fill(0),n(r)])},lt=(e,t)=>g("trak",null,[ft(e,t),ut(e,t)]),ft=(e,t)=>{let s=Ae(e.samples),r=O(s?s.presentationTimestamp+s.duration:0,ye),a=!H(t)||!H(r),o=a?V:n,h;return e.info.type==="video"?h=typeof e.info.rotation=="number"?Pe(e.info.rotation):e.info.rotation:h=je,w("tkhd",+a,3,[o(t),o(t),n(e.id),n(0),o(r),Array(8).fill(0),c(0),c(0),ze(e.info.type==="audio"?1:0),c(0),$e(h),A(e.info.type==="video"?e.info.width:0),A(e.info.type==="video"?e.info.height:0)])},ut=(e,t)=>g("mdia",null,[dt(e,t),mt(e.info.type==="video"?"vide":"soun"),pt(e)]),dt=(e,t)=>{let s=Ae(e.samples),r=O(s?s.presentationTimestamp+s.duration:0,e.timescale),a=!H(t)||!H(r),o=a?V:n;return w("mdhd",+a,0,[o(t),o(t),n(e.timescale),o(r),c(21956),c(0)])},mt=e=>w("hdlr",0,0,[E("mhlr"),E(e),n(0),n(0),n(0),E("mp4-muxer-hdlr",!0)]),pt=e=>g("minf",null,[e.info.type==="video"?ct():wt(),vt(),yt(e)]),ct=()=>w("vmhd",0,1,[c(0),c(0),c(0),c(0)]),wt=()=>w("smhd",0,0,[c(0),c(0)]),vt=()=>g("dinf",null,[gt()]),gt=()=>w("dref",0,0,[n(1)],[Ct()]),Ct=()=>w("url ",0,1),yt=e=>{let t=e.compositionTimeOffsetTable.length>1||e.compositionTimeOffsetTable.some(s=>s.sampleCompositionTimeOffset!==0);return g("stbl",null,[Tt(e),Ut(e),xt(e),Wt(e),Ft(e),Nt(e),t?Rt(e):null])},Tt=e=>w("stsd",0,0,[n(1)],[e.info.type==="video"?St(Kt[e.info.codec],e):Mt(Yt[e.info.codec],e)]),St=(e,t)=>g(e,[Array(6).fill(0),c(1),c(0),c(0),Array(12).fill(0),c(t.info.width),c(t.info.height),n(4718592),n(4718592),n(0),c(1),Array(32).fill(0),c(24),rt(65535)],[Qt[t.info.codec](t),t.info.decoderConfig.colorSpace?Et(t):null]),bt={bt709:1,bt470bg:5,smpte170m:6},kt={bt709:1,smpte170m:6,"iec61966-2-1":13},_t={rgb:0,bt709:1,bt470bg:5,smpte170m:6},Et=e=>g("colr",[E("nclx"),c(bt[e.info.decoderConfig.colorSpace.primaries]),c(kt[e.info.decoderConfig.colorSpace.transfer]),c(_t[e.info.decoderConfig.colorSpace.matrix]),C((e.info.decoderConfig.colorSpace.fullRange?1:0)<<7)]),zt=e=>e.info.decoderConfig&&g("avcC",[...new Uint8Array(e.info.decoderConfig.description)]),At=e=>e.info.decoderConfig&&g("hvcC",[...new Uint8Array(e.info.decoderConfig.description)]),Ot=e=>{if(!e.info.decoderConfig)return null;let t=e.info.decoderConfig;if(!t.colorSpace)throw new Error("'colorSpace' is required in the decoder config for VP9.");let s=t.codec.split("."),r=Number(s[1]),a=Number(s[2]),f=(Number(s[3])<<4)+(0<<1)+Number(t.colorSpace.fullRange);return w("vpcC",1,0,[C(r),C(a),C(f),C(2),C(2),C(2),c(0)])},Bt=()=>{let s=(1<<7)+1;return g("av1C",[s,0,0,0])},Mt=(e,t)=>g(e,[Array(6).fill(0),c(1),c(0),c(0),n(0),c(t.info.numberOfChannels),c(16),c(0),c(0),A(t.info.sampleRate)],[Jt[t.info.codec](t)]),It=e=>{let t=new Uint8Array(e.info.decoderConfig.description);return w("esds",0,0,[n(58753152),C(32+t.byteLength),c(1),C(0),n(75530368),C(18+t.byteLength),C(64),C(21),Ve(0),n(130071),n(130071),n(92307584),C(t.byteLength),...t,n(109084800),C(1),C(2)])},Dt=e=>{let t=3840,s=0,r=e.info.decoderConfig?.description;if(r){if(r.byteLength<18)throw new TypeError("Invalid decoder description provided for Opus; must be at least 18 bytes long.");let a=ArrayBuffer.isView(r)?new DataView(r.buffer,r.byteOffset,r.byteLength):new DataView(r);t=a.getUint16(10,!0),s=a.getInt16(14,!0)}return g("dOps",[C(0),C(e.info.numberOfChannels),c(t),n(e.info.sampleRate),ze(s),C(0)])},Ut=e=>w("stts",0,0,[n(e.timeToSampleTable.length),e.timeToSampleTable.map(t=>[n(t.sampleCount),n(t.sampleDelta)])]),xt=e=>{if(e.samples.every(s=>s.type==="key"))return null;let t=[...e.samples.entries()].filter(([,s])=>s.type==="key");return w("stss",0,0,[n(t.length),t.map(([s])=>n(s+1))])},Wt=e=>w("stsc",0,0,[n(e.compactlyCodedChunkTable.length),e.compactlyCodedChunkTable.map(t=>[n(t.firstChunk),n(t.samplesPerChunk),n(1)])]),Ft=e=>w("stsz",0,0,[n(0),n(e.samples.length),e.samples.map(t=>n(t.size))]),Nt=e=>e.finalizedChunks.length>0&&le(e.finalizedChunks).offset>=2**32?w("co64",0,0,[n(e.finalizedChunks.length),e.finalizedChunks.map(t=>V(t.offset))]):w("stco",0,0,[n(e.finalizedChunks.length),e.finalizedChunks.map(t=>n(t.offset))]),Rt=e=>w("ctts",0,0,[n(e.compositionTimeOffsetTable.length),e.compositionTimeOffsetTable.map(t=>[n(t.sampleCount),n(t.sampleCompositionTimeOffset)])]),Lt=e=>g("mvex",null,e.map(Vt)),Vt=e=>w("trex",0,0,[n(e.id),n(1),n(0),n(0),n(0)]),Le=(e,t)=>g("moof",null,[Pt(e),...t.map(jt)]),Pt=e=>w("mfhd",0,0,[n(e)]),He=e=>{let t=0,s=0,r=0,a=0,o=e.type==="delta";return s|=+o,o?t|=1:t|=2,t<<24|s<<16|r<<8|a},jt=e=>g("traf",null,[$t(e),Ht(e),qt(e)]),$t=e=>{let t=0;t|=8,t|=16,t|=32,t|=131072;let s=e.currentChunk.samples[1]??e.currentChunk.samples[0],r={duration:s.timescaleUnitsToNextSample,size:s.size,flags:He(s)};return w("tfhd",0,t,[n(e.id),n(r.duration),n(r.size),n(r.flags)])},Ht=e=>w("tfdt",1,0,[V(O(e.currentChunk.startTimestamp,e.timescale))]),qt=e=>{let t=e.currentChunk.samples.map(M=>M.timescaleUnitsToNextSample),s=e.currentChunk.samples.map(M=>M.size),r=e.currentChunk.samples.map(He),a=e.currentChunk.samples.map(M=>O(M.presentationTimestamp-M.decodeTimestamp,e.timescale)),o=new Set(t),h=new Set(s),f=new Set(r),v=new Set(a),S=f.size===2&&r[0]!==r[1],U=o.size>1,X=h.size>1,Ne=!S&&f.size>1,Re=v.size>1||[...v].some(M=>M!==0),x=0;return x|=1,x|=4*+S,x|=256*+U,x|=512*+X,x|=1024*+Ne,x|=2048*+Re,w("trun",1,x,[n(e.currentChunk.samples.length),n(e.currentChunk.offset-e.currentChunk.moofOffset||0),S?n(r[0]):[],e.currentChunk.samples.map((M,se)=>[U?n(t[se]):[],X?n(s[se]):[],Ne?n(r[se]):[],Re?at(a[se]):[]])])},Xt=e=>g("mfra",null,[...e.map(Gt),Zt()]),Gt=(e,t)=>w("tfra",1,0,[n(e.id),n(63),n(e.finalizedChunks.length),e.finalizedChunks.map(r=>[V(O(r.startTimestamp,e.timescale)),V(r.moofOffset),n(t+1),n(1),n(1)])]),Zt=()=>w("mfro",0,0,[n(0)]),Kt={avc:"avc1",hevc:"hvc1",vp9:"vp09",av1:"av01"},Qt={avc:zt,hevc:At,vp9:Ot,av1:Bt},Yt={aac:"mp4a",opus:"Opus"},Jt={aac:It,opus:Dt};var ce=class{},Oe=class extends ce{constructor(){super(...arguments),this.buffer=null}},qe=class extends ce{constructor(e){if(super(),this.options=e,typeof e!="object")throw new TypeError("StreamTarget requires an options object to be passed to its constructor.");if(e.onData){if(typeof e.onData!="function")throw new TypeError("options.onData, when provided, must be a function.");if(e.onData.length<2)throw new TypeError("options.onData, when provided, must be a function that takes in at least two arguments (data and position). Ignoring the position argument, which specifies the byte offset at which the data is to be written, can lead to broken outputs.")}if(e.chunked!==void 0&&typeof e.chunked!="boolean")throw new TypeError("options.chunked, when provided, must be a boolean.");if(e.chunkSize!==void 0&&(!Number.isInteger(e.chunkSize)||e.chunkSize<1024))throw new TypeError("options.chunkSize, when provided, must be an integer and not smaller than 1024.")}},ei=class extends ce{constructor(e,t){if(super(),this.stream=e,this.options=t,!(e instanceof FileSystemWritableFileStream))throw new TypeError("FileSystemWritableFileStreamTarget requires a FileSystemWritableFileStream instance.");if(t!==void 0&&typeof t!="object")throw new TypeError("FileSystemWritableFileStreamTarget's options, when provided, must be an object.");if(t&&t.chunkSize!==void 0&&(!Number.isInteger(t.chunkSize)||t.chunkSize<=0))throw new TypeError("options.chunkSize, when provided, must be a positive integer")}},W,P,Xe=class{constructor(){this.pos=0,d(this,W,new Uint8Array(8)),d(this,P,new DataView(i(this,W).buffer)),this.offsets=new WeakMap}seek(e){this.pos=e}writeU32(e){i(this,P).setUint32(0,e,!1),this.write(i(this,W).subarray(0,4))}writeU64(e){i(this,P).setUint32(0,Math.floor(e/2**32),!1),i(this,P).setUint32(4,e,!1),this.write(i(this,W).subarray(0,8))}writeAscii(e){for(let t=0;t<e.length;t++)i(this,P).setUint8(t%8,e.charCodeAt(t)),t%8===7&&this.write(i(this,W));e.length%8!==0&&this.write(i(this,W).subarray(0,e.length%8))}writeBox(e){if(this.offsets.set(e,this.pos),e.contents&&!e.children)this.writeBoxHeader(e,e.size??e.contents.byteLength+8),this.write(e.contents);else{let t=this.pos;if(this.writeBoxHeader(e,0),e.contents&&this.write(e.contents),e.children)for(let a of e.children)a&&this.writeBox(a);let s=this.pos,r=e.size??s-t;this.seek(t),this.writeBoxHeader(e,r),this.seek(s)}}writeBoxHeader(e,t){this.writeU32(e.largeSize?1:t),this.writeAscii(e.type),e.largeSize&&this.writeU64(t)}measureBoxHeader(e){return 8+(e.largeSize?8:0)}patchBox(e){let t=this.pos;this.seek(this.offsets.get(e)),this.writeBox(e),this.seek(t)}measureBox(e){if(e.contents&&!e.children)return this.measureBoxHeader(e)+e.contents.byteLength;{let t=this.measureBoxHeader(e);if(e.contents&&(t+=e.contents.byteLength),e.children)for(let s of e.children)s&&(t+=this.measureBox(s));return t}}};W=new WeakMap;P=new WeakMap;var ae,L,te,G,ne,ge,ti=class extends Xe{constructor(e){super(),d(this,ne),d(this,ae,void 0),d(this,L,new ArrayBuffer(2**16)),d(this,te,new Uint8Array(i(this,L))),d(this,G,0),T(this,ae,e)}write(e){m(this,ne,ge).call(this,this.pos+e.byteLength),i(this,te).set(e,this.pos),this.pos+=e.byteLength,T(this,G,Math.max(i(this,G),this.pos))}finalize(){m(this,ne,ge).call(this,this.pos),i(this,ae).buffer=i(this,L).slice(0,Math.max(i(this,G),this.pos))}};ae=new WeakMap;L=new WeakMap;te=new WeakMap;G=new WeakMap;ne=new WeakSet;ge=function(e){let t=i(this,L).byteLength;for(;t<e;)t*=2;if(t===i(this,L).byteLength)return;let s=new ArrayBuffer(t),r=new Uint8Array(s);r.set(i(this,te),0),T(this,L,s),T(this,te,r)};var ii=2**24,si=2,Q,F,Z,D,_,fe,Ce,Be,Ge,Me,Ze,Y,ue,Ie=class extends Xe{constructor(e){super(),d(this,fe),d(this,Be),d(this,Me),d(this,Y),d(this,Q,void 0),d(this,F,[]),d(this,Z,void 0),d(this,D,void 0),d(this,_,[]),T(this,Q,e),T(this,Z,e.options?.chunked??!1),T(this,D,e.options?.chunkSize??ii)}write(e){i(this,F).push({data:e.slice(),start:this.pos}),this.pos+=e.byteLength}flush(){if(i(this,F).length===0)return;let e=[],t=[...i(this,F)].sort((s,r)=>s.start-r.start);e.push({start:t[0].start,size:t[0].data.byteLength});for(let s=1;s<t.length;s++){let r=e[e.length-1],a=t[s];a.start<=r.start+r.size?r.size=Math.max(r.size,a.start+a.data.byteLength-r.start):e.push({start:a.start,size:a.data.byteLength})}for(let s of e){s.data=new Uint8Array(s.size);for(let r of i(this,F))s.start<=r.start&&r.start<s.start+s.size&&s.data.set(r.data,r.start-s.start);i(this,Z)?(m(this,fe,Ce).call(this,s.data,s.start),m(this,Y,ue).call(this)):i(this,Q).options.onData?.(s.data,s.start)}i(this,F).length=0}finalize(){i(this,Z)&&m(this,Y,ue).call(this,!0)}};Q=new WeakMap;F=new WeakMap;Z=new WeakMap;D=new WeakMap;_=new WeakMap;fe=new WeakSet;Ce=function(e,t){let s=i(this,_).findIndex(f=>f.start<=t&&t<f.start+i(this,D));s===-1&&(s=m(this,Me,Ze).call(this,t));let r=i(this,_)[s],a=t-r.start,o=e.subarray(0,Math.min(i(this,D)-a,e.byteLength));r.data.set(o,a);let h={start:a,end:a+o.byteLength};if(m(this,Be,Ge).call(this,r,h),r.written[0].start===0&&r.written[0].end===i(this,D)&&(r.shouldFlush=!0),i(this,_).length>si){for(let f=0;f<i(this,_).length-1;f++)i(this,_)[f].shouldFlush=!0;m(this,Y,ue).call(this)}o.byteLength<e.byteLength&&m(this,fe,Ce).call(this,e.subarray(o.byteLength),t+o.byteLength)};Be=new WeakSet;Ge=function(e,t){let s=0,r=e.written.length-1,a=-1;for(;s<=r;){let o=Math.floor(s+(r-s+1)/2);e.written[o].start<=t.start?(s=o+1,a=o):r=o-1}for(e.written.splice(a+1,0,t),(a===-1||e.written[a].end<t.start)&&a++;a<e.written.length-1&&e.written[a].end>=e.written[a+1].start;)e.written[a].end=Math.max(e.written[a].end,e.written[a+1].end),e.written.splice(a+1,1)};Me=new WeakSet;Ze=function(e){let s={start:Math.floor(e/i(this,D))*i(this,D),data:new Uint8Array(i(this,D)),written:[],shouldFlush:!1};return i(this,_).push(s),i(this,_).sort((r,a)=>r.start-a.start),i(this,_).indexOf(s)};Y=new WeakSet;ue=function(e=!1){for(let t=0;t<i(this,_).length;t++){let s=i(this,_)[t];if(!(!s.shouldFlush&&!e)){for(let r of s.written)i(this,Q).options.onData?.(s.data.subarray(r.start,r.end),s.start+r.start);i(this,_).splice(t--,1)}}};var ri=class extends Ie{constructor(e){super(new qe({onData:(t,s)=>e.stream.write({type:"write",data:t,position:s}),chunked:!0,chunkSize:e.options?.chunkSize}))}},ye=1e3,ai=["avc","hevc","vp9","av1"],ni=["aac","opus"],oi=2082844800,hi=["strict","offset","cross-track-offset"],l,u,de,k,b,y,j,$,De,N,R,J,Te,Ke,Se,Qe,Ue,Ye,be,Je,xe,et,oe,ke,z,I,We,tt,ee,me,pe,Fe,q,ie,he,_e,it=class{constructor(e){if(d(this,Te),d(this,Se),d(this,Ue),d(this,be),d(this,xe),d(this,oe),d(this,z),d(this,We),d(this,ee),d(this,pe),d(this,q),d(this,he),d(this,l,void 0),d(this,u,void 0),d(this,de,void 0),d(this,k,void 0),d(this,b,null),d(this,y,null),d(this,j,Math.floor(Date.now()/1e3)+oi),d(this,$,[]),d(this,De,1),d(this,N,[]),d(this,R,[]),d(this,J,!1),m(this,Te,Ke).call(this,e),e.video=K(e.video),e.audio=K(e.audio),e.fastStart=K(e.fastStart),this.target=e.target,T(this,l,{firstTimestampBehavior:"strict",...e}),e.target instanceof Oe)T(this,u,new ti(e.target));else if(e.target instanceof qe)T(this,u,new Ie(e.target));else if(e.target instanceof ei)T(this,u,new ri(e.target));else throw new Error(`Invalid target: ${e.target}`);m(this,be,Je).call(this),m(this,Se,Qe).call(this)}addVideoChunk(e,t,s,r){if(!(e instanceof EncodedVideoChunk))throw new TypeError("addVideoChunk's first argument (sample) must be of type EncodedVideoChunk.");if(t&&typeof t!="object")throw new TypeError("addVideoChunk's second argument (meta), when provided, must be an object.");if(s!==void 0&&(!Number.isFinite(s)||s<0))throw new TypeError("addVideoChunk's third argument (timestamp), when provided, must be a non-negative real number.");if(r!==void 0&&!Number.isFinite(r))throw new TypeError("addVideoChunk's fourth argument (compositionTimeOffset), when provided, must be a real number.");let a=new Uint8Array(e.byteLength);e.copyTo(a),this.addVideoChunkRaw(a,e.type,s??e.timestamp,e.duration,t,r)}addVideoChunkRaw(e,t,s,r,a,o){if(!(e instanceof Uint8Array))throw new TypeError("addVideoChunkRaw's first argument (data) must be an instance of Uint8Array.");if(t!=="key"&&t!=="delta")throw new TypeError("addVideoChunkRaw's second argument (type) must be either 'key' or 'delta'.");if(!Number.isFinite(s)||s<0)throw new TypeError("addVideoChunkRaw's third argument (timestamp) must be a non-negative real number.");if(!Number.isFinite(r)||r<0)throw new TypeError("addVideoChunkRaw's fourth argument (duration) must be a non-negative real number.");if(a&&typeof a!="object")throw new TypeError("addVideoChunkRaw's fifth argument (meta), when provided, must be an object.");if(o!==void 0&&!Number.isFinite(o))throw new TypeError("addVideoChunkRaw's sixth argument (compositionTimeOffset), when provided, must be a real number.");if(m(this,he,_e).call(this),!i(this,l).video)throw new Error("No video track declared.");if(typeof i(this,l).fastStart=="object"&&i(this,b).samples.length===i(this,l).fastStart.expectedVideoChunks)throw new Error(`Cannot add more video chunks than specified in 'fastStart' (${i(this,l).fastStart.expectedVideoChunks}).`);let h=m(this,oe,ke).call(this,i(this,b),e,t,s,r,a,o);if(i(this,l).fastStart==="fragmented"&&i(this,y)){for(;i(this,R).length>0&&i(this,R)[0].decodeTimestamp<=h.decodeTimestamp;){let f=i(this,R).shift();m(this,z,I).call(this,i(this,y),f)}h.decodeTimestamp<=i(this,y).lastDecodeTimestamp?m(this,z,I).call(this,i(this,b),h):i(this,N).push(h)}else m(this,z,I).call(this,i(this,b),h)}addAudioChunk(e,t,s){if(!(e instanceof EncodedAudioChunk))throw new TypeError("addAudioChunk's first argument (sample) must be of type EncodedAudioChunk.");if(t&&typeof t!="object")throw new TypeError("addAudioChunk's second argument (meta), when provided, must be an object.");if(s!==void 0&&(!Number.isFinite(s)||s<0))throw new TypeError("addAudioChunk's third argument (timestamp), when provided, must be a non-negative real number.");let r=new Uint8Array(e.byteLength);e.copyTo(r),this.addAudioChunkRaw(r,e.type,s??e.timestamp,e.duration,t)}addAudioChunkRaw(e,t,s,r,a){if(!(e instanceof Uint8Array))throw new TypeError("addAudioChunkRaw's first argument (data) must be an instance of Uint8Array.");if(t!=="key"&&t!=="delta")throw new TypeError("addAudioChunkRaw's second argument (type) must be either 'key' or 'delta'.");if(!Number.isFinite(s)||s<0)throw new TypeError("addAudioChunkRaw's third argument (timestamp) must be a non-negative real number.");if(!Number.isFinite(r)||r<0)throw new TypeError("addAudioChunkRaw's fourth argument (duration) must be a non-negative real number.");if(a&&typeof a!="object")throw new TypeError("addAudioChunkRaw's fifth argument (meta), when provided, must be an object.");if(m(this,he,_e).call(this),!i(this,l).audio)throw new Error("No audio track declared.");if(typeof i(this,l).fastStart=="object"&&i(this,y).samples.length===i(this,l).fastStart.expectedAudioChunks)throw new Error(`Cannot add more audio chunks than specified in 'fastStart' (${i(this,l).fastStart.expectedAudioChunks}).`);let o=m(this,oe,ke).call(this,i(this,y),e,t,s,r,a);if(i(this,l).fastStart==="fragmented"&&i(this,b)){for(;i(this,N).length>0&&i(this,N)[0].decodeTimestamp<=o.decodeTimestamp;){let h=i(this,N).shift();m(this,z,I).call(this,i(this,b),h)}o.decodeTimestamp<=i(this,b).lastDecodeTimestamp?m(this,z,I).call(this,i(this,y),o):i(this,R).push(o)}else m(this,z,I).call(this,i(this,y),o)}finalize(){if(i(this,J))throw new Error("Cannot finalize a muxer more than once.");if(i(this,l).fastStart==="fragmented"){for(let t of i(this,N))m(this,z,I).call(this,i(this,b),t);for(let t of i(this,R))m(this,z,I).call(this,i(this,y),t);m(this,pe,Fe).call(this,!1)}else i(this,b)&&m(this,ee,me).call(this,i(this,b)),i(this,y)&&m(this,ee,me).call(this,i(this,y));let e=[i(this,b),i(this,y)].filter(Boolean);if(i(this,l).fastStart==="in-memory"){let t;for(let r=0;r<2;r++){let a=re(e,i(this,j)),o=i(this,u).measureBox(a);t=i(this,u).measureBox(i(this,k));let h=i(this,u).pos+o+t;for(let f of i(this,$)){f.offset=h;for(let{data:v}of f.samples)h+=v.byteLength,t+=v.byteLength}if(h<2**32)break;t>=2**32&&(i(this,k).largeSize=!0)}let s=re(e,i(this,j));i(this,u).writeBox(s),i(this,k).size=t,i(this,u).writeBox(i(this,k));for(let r of i(this,$))for(let a of r.samples)i(this,u).write(a.data),a.data=null}else if(i(this,l).fastStart==="fragmented"){let t=i(this,u).pos,s=Xt(e);i(this,u).writeBox(s);let r=i(this,u).pos-t;i(this,u).seek(i(this,u).pos-4),i(this,u).writeU32(r)}else{let t=i(this,u).offsets.get(i(this,k)),s=i(this,u).pos-t;i(this,k).size=s,i(this,k).largeSize=s>=2**32,i(this,u).patchBox(i(this,k));let r=re(e,i(this,j));if(typeof i(this,l).fastStart=="object"){i(this,u).seek(i(this,de)),i(this,u).writeBox(r);let a=t-i(this,u).pos;i(this,u).writeBox(ot(a))}else i(this,u).writeBox(r)}m(this,q,ie).call(this),i(this,u).finalize(),T(this,J,!0)}};l=new WeakMap;u=new WeakMap;de=new WeakMap;k=new WeakMap;b=new WeakMap;y=new WeakMap;j=new WeakMap;$=new WeakMap;De=new WeakMap;N=new WeakMap;R=new WeakMap;J=new WeakMap;Te=new WeakSet;Ke=function(e){if(typeof e!="object")throw new TypeError("The muxer requires an options object to be passed to its constructor.");if(!(e.target instanceof ce))throw new TypeError("The target must be provided and an instance of Target.");if(e.video){if(!ai.includes(e.video.codec))throw new TypeError(`Unsupported video codec: ${e.video.codec}`);if(!Number.isInteger(e.video.width)||e.video.width<=0)throw new TypeError(`Invalid video width: ${e.video.width}. Must be a positive integer.`);if(!Number.isInteger(e.video.height)||e.video.height<=0)throw new TypeError(`Invalid video height: ${e.video.height}. Must be a positive integer.`);let t=e.video.rotation;if(typeof t=="number"&&![0,90,180,270].includes(t))throw new TypeError(`Invalid video rotation: ${t}. Has to be 0, 90, 180 or 270.`);if(Array.isArray(t)&&(t.length!==9||t.some(s=>typeof s!="number")))throw new TypeError(`Invalid video transformation matrix: ${t.join()}`);if(e.video.frameRate!==void 0&&(!Number.isInteger(e.video.frameRate)||e.video.frameRate<=0))throw new TypeError(`Invalid video frame rate: ${e.video.frameRate}. Must be a positive integer.`)}if(e.audio){if(!ni.includes(e.audio.codec))throw new TypeError(`Unsupported audio codec: ${e.audio.codec}`);if(!Number.isInteger(e.audio.numberOfChannels)||e.audio.numberOfChannels<=0)throw new TypeError(`Invalid number of audio channels: ${e.audio.numberOfChannels}. Must be a positive integer.`);if(!Number.isInteger(e.audio.sampleRate)||e.audio.sampleRate<=0)throw new TypeError(`Invalid audio sample rate: ${e.audio.sampleRate}. Must be a positive integer.`)}if(e.firstTimestampBehavior&&!hi.includes(e.firstTimestampBehavior))throw new TypeError(`Invalid first timestamp behavior: ${e.firstTimestampBehavior}`);if(typeof e.fastStart=="object"){if(e.video){if(e.fastStart.expectedVideoChunks===void 0)throw new TypeError("'fastStart' is an object but is missing property 'expectedVideoChunks'.");if(!Number.isInteger(e.fastStart.expectedVideoChunks)||e.fastStart.expectedVideoChunks<0)throw new TypeError("'expectedVideoChunks' must be a non-negative integer.")}if(e.audio){if(e.fastStart.expectedAudioChunks===void 0)throw new TypeError("'fastStart' is an object but is missing property 'expectedAudioChunks'.");if(!Number.isInteger(e.fastStart.expectedAudioChunks)||e.fastStart.expectedAudioChunks<0)throw new TypeError("'expectedAudioChunks' must be a non-negative integer.")}}else if(![!1,"in-memory","fragmented"].includes(e.fastStart))throw new TypeError("'fastStart' option must be false, 'in-memory', 'fragmented' or an object.");if(e.minFragmentDuration!==void 0&&(!Number.isFinite(e.minFragmentDuration)||e.minFragmentDuration<0))throw new TypeError("'minFragmentDuration' must be a non-negative number.")};Se=new WeakSet;Qe=function(){if(i(this,u).writeBox(nt({holdsAvc:i(this,l).video?.codec==="avc",fragmented:i(this,l).fastStart==="fragmented"})),T(this,de,i(this,u).pos),i(this,l).fastStart==="in-memory")T(this,k,ve(!1));else if(i(this,l).fastStart!=="fragmented"){if(typeof i(this,l).fastStart=="object"){let e=m(this,Ue,Ye).call(this);i(this,u).seek(i(this,u).pos+e)}T(this,k,ve(!0)),i(this,u).writeBox(i(this,k))}m(this,q,ie).call(this)};Ue=new WeakSet;Ye=function(){if(typeof i(this,l).fastStart!="object")return;let e=0,t=[i(this,l).fastStart.expectedVideoChunks,i(this,l).fastStart.expectedAudioChunks];for(let s of t)s&&(e+=8*Math.ceil(2/3*s),e+=4*s,e+=12*Math.ceil(2/3*s),e+=4*s,e+=8*s);return e+=4096,e};be=new WeakSet;Je=function(){if(i(this,l).video&&T(this,b,{id:1,info:{type:"video",codec:i(this,l).video.codec,width:i(this,l).video.width,height:i(this,l).video.height,rotation:i(this,l).video.rotation??0,decoderConfig:null},timescale:i(this,l).video.frameRate??57600,samples:[],finalizedChunks:[],currentChunk:null,firstDecodeTimestamp:void 0,lastDecodeTimestamp:-1,timeToSampleTable:[],compositionTimeOffsetTable:[],lastTimescaleUnits:null,lastSample:null,compactlyCodedChunkTable:[]}),i(this,l).audio&&(T(this,y,{id:i(this,l).video?2:1,info:{type:"audio",codec:i(this,l).audio.codec,numberOfChannels:i(this,l).audio.numberOfChannels,sampleRate:i(this,l).audio.sampleRate,decoderConfig:null},timescale:i(this,l).audio.sampleRate,samples:[],finalizedChunks:[],currentChunk:null,firstDecodeTimestamp:void 0,lastDecodeTimestamp:-1,timeToSampleTable:[],compositionTimeOffsetTable:[],lastTimescaleUnits:null,lastSample:null,compactlyCodedChunkTable:[]}),i(this,l).audio.codec==="aac")){let e=m(this,xe,et).call(this,2,i(this,l).audio.sampleRate,i(this,l).audio.numberOfChannels);i(this,y).info.decoderConfig={codec:i(this,l).audio.codec,description:e,numberOfChannels:i(this,l).audio.numberOfChannels,sampleRate:i(this,l).audio.sampleRate}}};xe=new WeakSet;et=function(e,t,s){let a=[96e3,88200,64e3,48e3,44100,32e3,24e3,22050,16e3,12e3,11025,8e3,7350].indexOf(t),o=s,h="";h+=e.toString(2).padStart(5,"0"),h+=a.toString(2).padStart(4,"0"),a===15&&(h+=t.toString(2).padStart(24,"0")),h+=o.toString(2).padStart(4,"0");let f=Math.ceil(h.length/8)*8;h=h.padEnd(f,"0");let v=new Uint8Array(h.length/8);for(let S=0;S<h.length;S+=8)v[S/8]=parseInt(h.slice(S,S+8),2);return v};oe=new WeakSet;ke=function(e,t,s,r,a,o,h){let f=r/1e6,v=(r-(h??0))/1e6,S=a/1e6,U=m(this,We,tt).call(this,f,v,e);return f=U.presentationTimestamp,v=U.decodeTimestamp,o?.decoderConfig&&(e.info.decoderConfig===null?e.info.decoderConfig=o.decoderConfig:Object.assign(e.info.decoderConfig,o.decoderConfig)),{presentationTimestamp:f,decodeTimestamp:v,duration:S,data:t,size:t.byteLength,type:s,timescaleUnitsToNextSample:O(S,e.timescale)}};z=new WeakSet;I=function(e,t){i(this,l).fastStart!=="fragmented"&&e.samples.push(t);let s=O(t.presentationTimestamp-t.decodeTimestamp,e.timescale);if(e.lastTimescaleUnits!==null){let a=O(t.decodeTimestamp,e.timescale,!1),o=Math.round(a-e.lastTimescaleUnits);if(e.lastTimescaleUnits+=o,e.lastSample.timescaleUnitsToNextSample=o,i(this,l).fastStart!=="fragmented"){let h=le(e.timeToSampleTable);h.sampleCount===1?(h.sampleDelta=o,h.sampleCount++):h.sampleDelta===o?h.sampleCount++:(h.sampleCount--,e.timeToSampleTable.push({sampleCount:2,sampleDelta:o}));let f=le(e.compositionTimeOffsetTable);f.sampleCompositionTimeOffset===s?f.sampleCount++:e.compositionTimeOffsetTable.push({sampleCount:1,sampleCompositionTimeOffset:s})}}else e.lastTimescaleUnits=0,i(this,l).fastStart!=="fragmented"&&(e.timeToSampleTable.push({sampleCount:1,sampleDelta:O(t.duration,e.timescale)}),e.compositionTimeOffsetTable.push({sampleCount:1,sampleCompositionTimeOffset:s}));e.lastSample=t;let r=!1;if(!e.currentChunk)r=!0;else{let a=t.presentationTimestamp-e.currentChunk.startTimestamp;if(i(this,l).fastStart==="fragmented"){let o=i(this,b)??i(this,y),h=i(this,l).minFragmentDuration??1;e===o&&t.type==="key"&&a>=h&&(r=!0,m(this,pe,Fe).call(this))}else r=a>=.5}r&&(e.currentChunk&&m(this,ee,me).call(this,e),e.currentChunk={startTimestamp:t.presentationTimestamp,samples:[]}),e.currentChunk.samples.push(t)};We=new WeakSet;tt=function(e,t,s){let r=i(this,l).firstTimestampBehavior==="strict",a=s.lastDecodeTimestamp===-1;if(r&&a&&t!==0)throw new Error(`The first chunk for your media track must have a timestamp of 0 (received DTS=${t}).Non-zero first timestamps are often caused by directly piping frames or audio data from a MediaStreamTrack into the encoder. Their timestamps are typically relative to the age of thedocument, which is probably what you want.
+
+If you want to offset all timestamps of a track such that the first one is zero, set firstTimestampBehavior: 'offset' in the options.
+`);if(i(this,l).firstTimestampBehavior==="offset"||i(this,l).firstTimestampBehavior==="cross-track-offset"){s.firstDecodeTimestamp===void 0&&(s.firstDecodeTimestamp=t);let h;i(this,l).firstTimestampBehavior==="offset"?h=s.firstDecodeTimestamp:h=Math.min(i(this,b)?.firstDecodeTimestamp??1/0,i(this,y)?.firstDecodeTimestamp??1/0),t-=h,e-=h}if(t<s.lastDecodeTimestamp)throw new Error(`Timestamps must be monotonically increasing (DTS went from ${s.lastDecodeTimestamp*1e6} to ${t*1e6}).`);return s.lastDecodeTimestamp=t,{presentationTimestamp:e,decodeTimestamp:t}};ee=new WeakSet;me=function(e){if(i(this,l).fastStart==="fragmented")throw new Error("Can't finalize individual chunks if 'fastStart' is set to 'fragmented'.");if(e.currentChunk){if(e.finalizedChunks.push(e.currentChunk),i(this,$).push(e.currentChunk),(e.compactlyCodedChunkTable.length===0||le(e.compactlyCodedChunkTable).samplesPerChunk!==e.currentChunk.samples.length)&&e.compactlyCodedChunkTable.push({firstChunk:e.finalizedChunks.length,samplesPerChunk:e.currentChunk.samples.length}),i(this,l).fastStart==="in-memory"){e.currentChunk.offset=0;return}e.currentChunk.offset=i(this,u).pos;for(let t of e.currentChunk.samples)i(this,u).write(t.data),t.data=null;m(this,q,ie).call(this)}};pe=new WeakSet;Fe=function(e=!0){if(i(this,l).fastStart!=="fragmented")throw new Error("Can't finalize a fragment unless 'fastStart' is set to 'fragmented'.");let t=[i(this,b),i(this,y)].filter(f=>f&&f.currentChunk);if(t.length===0)return;let s=st(this,De)._++;if(s===1){let f=re(t,i(this,j),!0);i(this,u).writeBox(f)}let r=i(this,u).pos,a=Le(s,t);i(this,u).writeBox(a);{let f=ve(!1),v=0;for(let U of t)for(let X of U.currentChunk.samples)v+=X.size;let S=i(this,u).measureBox(f)+v;S>=2**32&&(f.largeSize=!0,S=i(this,u).measureBox(f)+v),f.size=S,i(this,u).writeBox(f)}for(let f of t){f.currentChunk.offset=i(this,u).pos,f.currentChunk.moofOffset=r;for(let v of f.currentChunk.samples)i(this,u).write(v.data),v.data=null}let o=i(this,u).pos;i(this,u).seek(i(this,u).offsets.get(a));let h=Le(s,t);i(this,u).writeBox(h),i(this,u).seek(o);for(let f of t)f.finalizedChunks.push(f.currentChunk),i(this,$).push(f.currentChunk),f.currentChunk=null;e&&m(this,q,ie).call(this)};q=new WeakSet;ie=function(){i(this,u)instanceof Ie&&i(this,u).flush()};he=new WeakSet;_e=function(){if(i(this,J))throw new Error("Cannot add new video or audio chunks after the file has been finalized.")};window.Mp4Muxer={Muxer:it,ArrayBufferTarget:Oe};})();
+
+</script>
 
 <script type="text/worker" id="cryptoWorker">
 'use strict';
@@ -636,14 +801,47 @@ async function aead(mkBytes, info) {
   raw.fill(0);
   return key;
 }
-function aad(dir, counter) {
-  const b = new Uint8Array(18);
+function aad(dir, counter, frameLen) {
+  const b = new Uint8Array(22);
   b.set(MSG_INFO, 0);
   b[9] = dir;
   const dv = new DataView(b.buffer);
   dv.setUint32(10, Math.floor(counter / 4294967296));
   dv.setUint32(14, counter >>> 0);
+  // R2-16: bind the padded frame length, which is the only length a receiver
+  // can know before decrypting. The true length travels inside the plaintext
+  // and is asserted against this frame length on open.
+  dv.setUint32(18, frameLen >>> 0);
   return b;
+}
+var PAD = 4096;
+async function gzipBytes(bytes) {
+  if (!('CompressionStream' in self)) return null;
+  try {
+    const out = await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+    return new Uint8Array(out);
+  } catch (_) {
+    return null;
+  }
+}
+async function gunzipBytes(bytes) {
+  const out = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+  return new Uint8Array(out);
+}
+// Compress first, then pad, then encrypt. Ciphertext does not compress, so this
+// order is the only one that can shrink a frame at all.
+async function framePlain(text) {
+  const raw = TE.encode(text);
+  const gz = await gzipBytes(raw);
+  const useGzip = gz && gz.length + 1 < raw.length;
+  const body = new Uint8Array(1 + (useGzip ? gz.length : raw.length));
+  body[0] = useGzip ? 1 : 0;
+  body.set(useGzip ? gz : raw, 1);
+  const total = 4 + body.length;
+  const padded = new Uint8Array(Math.max(PAD, Math.ceil(total / PAD) * PAD));
+  new DataView(padded.buffer).setUint32(0, body.length);
+  padded.set(body, 4);
+  return padded;
 }
 function nonce(prefix, index) {
   const b = new Uint8Array(12);
@@ -671,7 +869,9 @@ async function sealControl(jsonText, file) {
     text = JSON.stringify(obj);
     files.set(file.id, { id: file.id, key: fk, prefix: prefix, size: file.size, chunks: file.chunks, n: 0, received: 0, parts: null, type: '', sending: true });
   }
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: new Uint8Array(12), additionalData: aad(sendDir, step.counter) }, body, TE.encode(text)));
+  const plain = await framePlain(text);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: new Uint8Array(12), additionalData: aad(sendDir, step.counter, plain.length + 16) }, body, plain));
+  plain.fill(0);
   step.mkBytes.fill(0);
   return ct;
 }
@@ -680,12 +880,42 @@ async function openControl(bytes) {
   const body = await aead(step.mkBytes, 'eph-v2-aead');
   let pt;
   try {
-    pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(12), additionalData: aad(recvDir, step.counter) }, body, bytes);
+    pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(12), additionalData: aad(recvDir, step.counter, bytes.length) }, body, bytes));
   } catch (e) {
     step.mkBytes.fill(0);
     throw new Error('frame did not authenticate');
   }
-  const text = TD.decode(pt);
+  if (bytes.length !== pt.length + 16 || pt.length < PAD || pt.length % PAD !== 0) {
+    pt.fill(0);
+    step.mkBytes.fill(0);
+    throw new Error('frame length is not on a padding boundary');
+  }
+  const bodyLen = new DataView(pt.buffer, pt.byteOffset, pt.byteLength).getUint32(0);
+  if (bodyLen < 1 || bodyLen > pt.length - 4) {
+    pt.fill(0);
+    step.mkBytes.fill(0);
+    throw new Error('padded length does not agree with the frame');
+  }
+  for (let i = 4 + bodyLen; i < pt.length; i++) {
+    if (pt[i] !== 0) {
+      pt.fill(0);
+      step.mkBytes.fill(0);
+      throw new Error('padding is not zero');
+    }
+  }
+  const framed = pt.subarray(4, 4 + bodyLen);
+  let text;
+  try {
+    let raw = framed.subarray(1);
+    if (framed[0] === 1) raw = await gunzipBytes(raw);
+    else if (framed[0] !== 0) throw new Error('bad frame flag');
+    text = TD.decode(raw);
+  } catch (e) {
+    pt.fill(0);
+    step.mkBytes.fill(0);
+    throw new Error('frame body did not decode');
+  }
+  pt.fill(0);
   if (text.length > 65536) {
     step.mkBytes.fill(0);
     throw new Error('frame too large');
@@ -900,6 +1130,8 @@ self.onmessage = function (ev) {
 
   const $ = (id) => document.getElementById(id);
   const MAX_FILE = 50 * 1024 * 1024;
+  const MAX_VIDEO = 45 * 1024 * 1024;
+  const VIDEO_CAP = 47185920;
   const CHUNK = 64 * 1024;
   const MAX_TEXT = 20000;
   const MAX_ROWS = 2000;
@@ -913,6 +1145,29 @@ self.onmessage = function (ev) {
   const IDLE_MS = 30 * 60 * 1000;
   const IDLE_CHECK_MS = 15000;
   const TRANSFER_IDLE_MS = 60000;
+  const IMAGE_MAX_PX = 60000000;
+  const IMAGE_LONG_EDGE = 1600;
+  const IMAGE_TARGET = 350 * 1024;
+  const REACT_FRAME_MAX = 256;
+  const REACT_SESSION_MAX = 200;
+  const REACT_BURST = 20;
+  const REACT_REFILL_MS = 250;
+  const RATCHET_AGE_MS = 20 * 60 * 1000;
+  // R2-18: mp4-muxer 5.2.2, esbuild --bundle --minify --format=iife. The
+  // blueprint pin is 31,103 B for the same entry without the global export
+  // assignment; this build adds the 30 B assignment, 31,133 B total.
+  const MUXER_PIN = 31103;
+  const PALETTE = [
+    ['thumbsup', '\u{1F44D}'], ['heart', '\u2764\uFE0F'], ['laugh', '\u{1F602}'],
+    ['surprise', '\u{1F62E}'], ['sad', '\u{1F622}'], ['fire', '\u{1F525}'],
+    ['eyes', '\u{1F440}'], ['check', '\u2705'], ['clap', '\u{1F44F}'],
+    ['pray', '\u{1F64F}'], ['rocket', '\u{1F680}'], ['party', '\u{1F389}'],
+    ['think', '\u{1F914}'], ['wink', '\u{1F609}'], ['cool', '\u{1F60E}'],
+    ['100', '\u{1F4AF}'], ['star', '\u2B50'], ['bell', '\u{1F514}'],
+    ['pin', '\u{1F4CC}'], ['bulb', '\u{1F4A1}'], ['coffee', '\u2615'],
+    ['wave', '\u{1F44B}'], ['muscle', '\u{1F4AA}'], ['salute', '\u{1F44F}']
+  ];
+  const PALETTE_MAP = new Map(PALETTE);
   const ICE = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
@@ -955,7 +1210,26 @@ self.onmessage = function (ev) {
     verifyState: $('verifyState'),
     confirmSas: $('confirmSas'),
     badSas: $('badSas'),
-    route: $('route')
+    route: $('route'),
+    chips: $('chips'),
+    chipVerify: $('chipVerify'),
+    chipSuite: $('chipSuite'),
+    chipRatchet: $('chipRatchet'),
+    chipFiles: $('chipFiles'),
+    chipAbout: $('chipAbout'),
+    strip: $('strip'),
+    aging: $('aging'),
+    agingRotate: $('agingRotate'),
+    agingLater: $('agingLater'),
+    offerTtl: $('offerTtl'),
+    pairState: $('pairState'),
+    gallery: $('gallery'),
+    galleryGrid: $('galleryGrid'),
+    galleryNote: $('galleryNote'),
+    galleryClose: $('galleryClose'),
+    about: $('about'),
+    aboutDiag: $('aboutDiag'),
+    aboutClose: $('aboutClose')
   };
 
   let phase = 'idle';
@@ -997,6 +1271,26 @@ self.onmessage = function (ev) {
   let mig = null;
   let migTimer = 0;
   let escAt = 0;
+  let webpOk = null;
+  let offerIssuedAt = 0;
+  let ttlTimer = 0;
+  let chipTimer = 0;
+  let lastRekeyAt = 0;
+  let rekeyCount = 0;
+  let agingDismissedAt = 0;
+  let layerOpen = 0;
+  let evictedCount = 0;
+  let draftSeq = 0;
+  let transcoding = false;
+  let reactTokens = REACT_BURST;
+  let reactRefillAt = Date.now();
+  let reactDrops = [];
+  let reactRejects = [];
+  let reactMisses = [];
+  let reactMarks = 0;
+  const reactions = new Map();
+  const msgRows = new Map();
+  const slots = { active: null, pending: null };
   const urls = [];
   const rowUrls = new Map();
   const consumedSids = new Set();
@@ -1071,11 +1365,21 @@ self.onmessage = function (ev) {
     return el.log.scrollHeight - el.log.scrollTop - el.log.clientHeight < 90;
   }
 
+  function dropRow(node) {
+    if (!node || !node.dataset) return;
+    const mid = node.dataset.mid;
+    if (!mid) return;
+    if (node.dataset.marks) reactMarks = Math.max(0, reactMarks - Number(node.dataset.marks));
+    reactions.delete(mid);
+    msgRows.delete(mid);
+  }
+
   function trimLog() {
     while (el.log.children.length > MAX_ROWS) {
       const first = el.log.firstElementChild;
       if (!first || first === el.empty) break;
       const url = rowUrls.get(first);
+      dropRow(first);
       el.log.removeChild(first);
       rowUrls.delete(first);
       if (url) {
@@ -1096,18 +1400,199 @@ self.onmessage = function (ev) {
     scrollDown();
   }
 
-  function addMessage(text, mine) {
+  function addMessage(text, mine, mid) {
     const stick = atBottom();
+    const id = /^[0-9a-f]{16}$/.test(String(mid || '')) ? String(mid) : randomHex(8);
+    if (msgRows.has(id)) return null;
     const row = document.createElement('div');
     row.className = 'msg' + (mine ? ' me' : '');
+    row.dataset.mid = id;
+    row.tabIndex = 0;
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     bubble.textContent = text;
-    row.appendChild(bubble);
+    const pills = document.createElement('div');
+    pills.className = 'pills';
+    pills.setAttribute('aria-live', 'off');
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'react-add';
+    add.textContent = '+';
+    add.setAttribute('aria-label', 'Add a reaction');
+    add.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openPalette(id, add);
+    });
+    row.append(bubble, pills, add);
+    msgRows.set(id, { row: row, pills: pills, add: add });
     el.log.appendChild(row);
     el.empty.hidden = true;
     trimLog();
     if (stick) scrollDown();
+    return id;
+  }
+
+  function renderPills(mid) {
+    const entry = msgRows.get(mid);
+    if (!entry) return;
+    const marks = reactions.get(mid);
+    entry.pills.replaceChildren();
+    if (!marks) {
+      entry.row.dataset.marks = '0';
+      return;
+    }
+    let total = 0;
+    marks.forEach((slot, code) => {
+      if (!slot.me && !slot.peer) return;
+      total += (slot.me ? 1 : 0) + (slot.peer ? 1 : 0);
+    });
+    entry.row.dataset.marks = String(total);
+    let shown = 0;
+    let hidden = 0;
+    PALETTE.forEach(([code, glyph]) => {
+      const slot = marks.get(code);
+      if (!slot || (!slot.me && !slot.peer)) return;
+      const count = (slot.me ? 1 : 0) + (slot.peer ? 1 : 0);
+      if (shown >= 8 && !entry.expanded) { hidden++; return; }
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'pill';
+      pill.setAttribute('aria-pressed', slot.me ? 'true' : 'false');
+      pill.setAttribute('aria-label', code.replace(/-/g, ' ') + ', ' + count + (count === 1 ? ' reaction' : ' reactions') + (slot.me ? ', one of them yours' : ''));
+      const g = document.createElement('span');
+      g.textContent = glyph;
+      g.setAttribute('aria-hidden', 'true');
+      const n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = String(count);
+      pill.append(g, n);
+      pill.addEventListener('click', () => sendReact(mid, code, slot.me ? 'remove' : 'add'));
+      entry.pills.appendChild(pill);
+      shown++;
+    });
+    if (hidden) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'pill';
+      more.textContent = '+' + hidden;
+      more.setAttribute('aria-label', 'Show ' + hidden + ' more reactions');
+      more.addEventListener('click', () => {
+        entry.expanded = true;
+        renderPills(mid);
+      });
+      entry.pills.appendChild(more);
+    }
+  }
+
+  function reactReject() {
+    const now = Date.now();
+    reactRejects = reactRejects.filter((t) => now - t < 10000);
+    reactRejects.push(now);
+    if (reactRejects.length >= 3) endSession('anomaly', 'react-reject');
+  }
+
+  function reactMiss() {
+    const now = Date.now();
+    reactMisses = reactMisses.filter((t) => now - t < 10000);
+    reactMisses.push(now);
+    if (reactMisses.length >= 5) endSession('anomaly', 'react-miss');
+  }
+
+  function reactBudget() {
+    const now = Date.now();
+    const add = Math.floor((now - reactRefillAt) / REACT_REFILL_MS);
+    if (add > 0) {
+      reactTokens = Math.min(REACT_BURST, reactTokens + add);
+      reactRefillAt += add * REACT_REFILL_MS;
+    }
+    if (reactTokens <= 0) {
+      reactDrops = reactDrops.filter((t) => now - t < 10000);
+      reactDrops.push(now);
+      if (reactDrops.length >= 5) endSession('anomaly', 'react-flood');
+      return false;
+    }
+    reactTokens--;
+    return true;
+  }
+
+  function applyReact(mid, code, op, who) {
+    if (!/^[0-9a-f]{16}$/.test(mid) || !PALETTE_MAP.has(code) || (op !== 'add' && op !== 'remove')) {
+      reactReject();
+      return false;
+    }
+    if (!msgRows.has(mid)) {
+      reactMiss();
+      return false;
+    }
+    let marks = reactions.get(mid);
+    if (!marks) { marks = new Map(); reactions.set(mid, marks); }
+    const slot = marks.get(code) || { me: false, peer: false };
+    const before = (slot.me ? 1 : 0) + (slot.peer ? 1 : 0);
+    if (who === 'me') slot.me = op === 'add';
+    else slot.peer = op === 'add';
+    const after = (slot.me ? 1 : 0) + (slot.peer ? 1 : 0);
+    if (after > before && reactMarks >= REACT_SESSION_MAX) {
+      if (who === 'me') slot.me = false;
+      else slot.peer = false;
+      addSystem('Reaction limit reached for this session.');
+      return false;
+    }
+    reactMarks += after - before;
+    marks.set(code, slot);
+    renderPills(mid);
+    return true;
+  }
+
+  function sendReact(mid, code, op) {
+    if (phase !== 'live') { toast('Confirm the safety number first'); return; }
+    if (!dc || dc.readyState !== 'open') { toast('Not connected'); return; }
+    if (reactMarks >= REACT_SESSION_MAX && op === 'add') { toast('Reaction limit reached'); return; }
+    if (!reactBudget()) return;
+    applyReact(mid, code, op, 'me');
+    sendControl({ k: 'react', t: mid, e: code, op: op }).catch(() => {});
+  }
+
+  let palettePop = null;
+  function closePalette() {
+    if (!palettePop) return;
+    palettePop.remove();
+    palettePop = null;
+    layerOpen = Math.max(0, layerOpen - 1);
+  }
+
+  function openPalette(mid, anchor) {
+    if (phase !== 'live') { toast('Confirm the safety number first'); return; }
+    closePalette();
+    const box = document.createElement('div');
+    box.className = 'palette';
+    box.setAttribute('role', 'menu');
+    PALETTE.slice(0, 8).forEach(([code, glyph]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = glyph;
+      b.title = code.replace(/-/g, ' ');
+      b.setAttribute('aria-label', code.replace(/-/g, ' '));
+      b.addEventListener('click', () => {
+        sendReact(mid, code, reactions.get(mid) && reactions.get(mid).get(code) && reactions.get(mid).get(code).me ? 'remove' : 'add');
+        closePalette();
+      });
+      box.appendChild(b);
+    });
+    anchor.parentNode.appendChild(box);
+    box.style.left = Math.max(0, anchor.offsetLeft - 40) + 'px';
+    box.style.top = Math.max(0, anchor.offsetTop - 34) + 'px';
+    palettePop = box;
+    layerOpen++;
+    const first = box.querySelector('button');
+    if (first) first.focus();
+    const away = (event) => {
+      if (palettePop === box && !box.contains(event.target) && event.target !== anchor) closePalette();
+    };
+    setTimeout(() => document.addEventListener('pointerdown', away, { once: true }), 0);
+  }
+
+  function onReact(msg) {
+    applyReact(String(msg.t || ''), String(msg.e || ''), String(msg.op || ''), 'peer');
   }
 
   function randomHex(bytes) {
@@ -1311,9 +1796,25 @@ self.onmessage = function (ev) {
       try { URL.revokeObjectURL(url); } catch (_) {}
     });
     rowUrls.clear();
+    reactions.clear();
+    msgRows.clear();
+    reactMarks = 0;
+    retained.length = 0;
+    receivedFiles = 0;
+    receivedBytes = 0;
+    evictedCount = 0;
+    slots.active = null;
+    slots.pending = null;
+    closePalette();
+    closeGallery();
+    closeAbout();
+    clearInterval(ttlTimer);
+    el.strip.hidden = true;
+    el.log.classList.remove('locked');
     el.verify.hidden = true;
-    el.pairing.hidden = true;
-    el.chat.hidden = true;
+    el.chips.hidden = true;
+    el.aging.hidden = true;
+    showScreen('S4');
     if (copiedCode && document.hasFocus()) {
       try { navigator.clipboard.writeText('').catch(() => {}); } catch (_) {}
     }
@@ -1458,6 +1959,12 @@ self.onmessage = function (ev) {
     });
   }
 
+  let inQueue = Promise.resolve();
+  function onWireQueued(ev) {
+    const data = ev && ev.data;
+    inQueue = inQueue.then(() => onWire({ data: data })).catch(() => {});
+  }
+
   function bindChannel(channel) {
     dc = channel;
     dc.binaryType = 'arraybuffer';
@@ -1469,17 +1976,18 @@ self.onmessage = function (ev) {
       }
       connected = true;
       phase = 'confirm';
-      el.pairing.hidden = true;
-      el.chat.hidden = false;
+      slots.active = { pc: pc, dc: channel, sid: sessionSid, log: [] };
       el.composer.hidden = false;
       el.wipe.disabled = false;
       el.verify.hidden = false;
       el.input.disabled = true;
       el.send.disabled = true;
       el.attach.disabled = true;
+      showScreen('S2');
       showSas();
       setStatus('connected, verify', 'wait');
       el.verifyState.textContent = localConfirm ? 'Waiting for the other person.' : 'Waiting for both people.';
+      updateChips();
       scrollDown();
       showRoute();
     });
@@ -1487,7 +1995,7 @@ self.onmessage = function (ev) {
       if (retired.has(channel)) return;
       if ((phase === 'confirm' || phase === 'live') && !(mig && mig.dc === channel)) endSession('peer');
     });
-    dc.addEventListener('message', onWire);
+    dc.addEventListener('message', onWireQueued);
   }
 
   function showSas() {
@@ -1500,12 +2008,14 @@ self.onmessage = function (ev) {
     el.suite.textContent = suiteLabel || 'suite';
     el.verify.hidden = false;
     el.confirmSas.disabled = localConfirm;
+    updateChips();
   }
 
   function maybeLive() {
     if (phase !== 'confirm') return;
     if (!localConfirm || !peerConfirm) {
       el.verifyState.textContent = 'Waiting for ' + (localConfirm ? 'the other person' : 'you') + '.';
+      updateChips();
       return;
     }
     phase = 'live';
@@ -1517,6 +2027,9 @@ self.onmessage = function (ev) {
     el.migrate.disabled = false;
     setStatus('verified', 'on');
     addSystem('Safety number confirmed on both sides. Content is unlocked.');
+    if (!lastRekeyAt) lastRekeyAt = Date.now();
+    showScreen('S3');
+    updateChips();
     el.input.focus();
   }
 
@@ -1526,6 +2039,7 @@ self.onmessage = function (ev) {
     el.confirmSas.disabled = true;
     sendControl({ k: 'sas-confirm' }).catch((e) => toast('Confirm frame failed: ' + (e && e.message ? e.message : 'unknown'), 8000));
     el.verifyState.textContent = peerConfirm ? 'Confirmed on both sides.' : 'Waiting for the other person.';
+    updateChips();
     maybeLive();
   }
 
@@ -1597,6 +2111,7 @@ self.onmessage = function (ev) {
 
   const TABLE = {
     msg: onMsg,
+    react: onReact,
     'file-start': onFileStart,
     'file-end': onFileEnd,
     'sas-confirm': onSasConfirm,
@@ -1634,6 +2149,10 @@ self.onmessage = function (ev) {
       return;
     }
     if (phase !== 'live' && phase !== 'migrating' && phase !== 'confirm') return;
+    if (k === 'react' && JSON.stringify(msg).length > REACT_FRAME_MAX) {
+      reactReject();
+      return;
+    }
     const handler = TABLE[k];
     if (!handler) {
       unknownFrame(k);
@@ -1700,7 +2219,8 @@ self.onmessage = function (ev) {
       unknownFrame('msg shape');
       return;
     }
-    addMessage(msg.text.slice(0, MAX_TEXT), false);
+    const id = addMessage(msg.text.slice(0, MAX_TEXT), false, typeof msg.mid === 'string' ? msg.mid : '');
+    if (id === null) addSystem('A duplicate message id was rejected.');
   }
 
   function onSasConfirm() {
@@ -1789,9 +2309,9 @@ self.onmessage = function (ev) {
       const url = URL.createObjectURL(res.blob);
       urls.push(url);
       rowUrls.set(cur.card.row, url);
-      const preview = /^image\/(png|jpe?g|gif|webp|avif)$/i.test(cur.type) && !dangerType(cur.type, cur.name);
+      const preview = (/^image\/(png|jpe?g|gif|webp|avif|bmp)$/i.test(cur.type) || /^video\//i.test(cur.type)) && !dangerType(cur.type, cur.name);
       cur.card.done(url, preview);
-      retained.push({ url: url, row: cur.card.row, size: cur.size });
+      retained.push({ url: url, row: cur.card.row, size: cur.size, name: cur.name, type: cur.type });
       receivedFiles++;
       receivedBytes += cur.size;
       addSystem('File received and verified: ' + cur.name);
@@ -1813,6 +2333,7 @@ self.onmessage = function (ev) {
       try { URL.revokeObjectURL(first.url); } catch (_) {}
       receivedFiles--;
       receivedBytes -= first.size;
+      evictedCount++;
       addSystem('An older received file was removed to stay within the session budget.');
     }
   }
@@ -1838,6 +2359,14 @@ self.onmessage = function (ev) {
     img.hidden = true;
     img.alt = '';
 
+    const video = document.createElement('video');
+    video.hidden = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.controls = true;
+    video.preload = 'metadata';
+    video.setAttribute('playsinline', '');
+
     const bar = document.createElement('div');
     bar.className = 'bar';
     const fill = document.createElement('i');
@@ -1858,7 +2387,7 @@ self.onmessage = function (ev) {
     warn.className = 'file-warn';
     warn.hidden = true;
 
-    card.append(head, img, bar, foot, warn);
+    card.append(head, img, video, bar, foot, warn);
     if (type) {
       const kind = document.createElement('div');
       kind.className = 'file-warn';
@@ -1875,11 +2404,26 @@ self.onmessage = function (ev) {
     trimLog();
     scrollDown();
 
+    const showPreview = (url) => {
+      if (!url) return;
+      if (/^video\//i.test(String(type || ''))) {
+        video.src = url;
+        video.hidden = false;
+      } else {
+        img.src = url;
+        img.hidden = false;
+      }
+    };
+
     return {
       row: row,
       img: img,
+      video: video,
       progress(ratio) {
         fill.style.width = Math.max(0, Math.min(100, ratio * 100)) + '%';
+      },
+      preview(url) {
+        showPreview(url);
       },
       done(url, preview) {
         fill.style.width = '100%';
@@ -1890,10 +2434,7 @@ self.onmessage = function (ev) {
           save.download = title.textContent;
           save.hidden = false;
         }
-        if (preview) {
-          img.src = url;
-          img.hidden = false;
-        }
+        if (preview) showPreview(url);
         if (atBottom()) scrollDown();
       },
       error(message) {
@@ -1915,8 +2456,9 @@ self.onmessage = function (ev) {
       toast('Not connected');
       return;
     }
-    sendControl({ k: 'msg', text: text.slice(0, MAX_TEXT) }).catch(() => {});
-    addMessage(text.slice(0, MAX_TEXT), true);
+    const mid = randomHex(8);
+    sendControl({ k: 'msg', mid: mid, text: text.slice(0, MAX_TEXT) }).catch(() => {});
+    addMessage(text.slice(0, MAX_TEXT), true, mid);
     el.input.value = '';
     autoSize();
     el.input.focus();
@@ -1938,55 +2480,513 @@ self.onmessage = function (ev) {
     });
   }
 
-  function queueFiles(files) {
+  function isImageType(type) {
+    return /^image\/(png|jpe?g|webp|bmp)$/i.test(String(type || ''));
+  }
+  function isAnimated(type) {
+    return /^image\/(gif|apng)$/i.test(String(type || ''));
+  }
+  function isVideoType(type) {
+    return /^video\//i.test(String(type || ''));
+  }
+  function synthName(type, source) {
+    draftSeq++;
+    const sub = String(type || '').split('/')[1] || 'bin';
+    let ext = sub.split(';')[0].split('+')[0].replace(/[^a-z0-9]/g, '');
+    if (ext === 'jpeg') ext = 'jpg';
+    if (!ext) ext = 'bin';
+    return (source || 'file') + '-' + draftSeq + '.' + ext;
+  }
+
+  async function probeWebp() {
+    if (webpOk !== null) return webpOk;
+    webpOk = false;
+    try {
+      const c = document.createElement('canvas');
+      c.width = 2;
+      c.height = 2;
+      const blob = await new Promise((resolve) => c.toBlob(resolve, 'image/webp', 0.8));
+      webpOk = !!blob && blob.type === 'image/webp';
+    } catch (_) {
+      webpOk = false;
+    }
+    return webpOk;
+  }
+
+  // R2-17 and R2-21: one canvas re-encode which drops EXIF, GPS, XMP and ICC,
+  // with the pixel gate before the destination canvas is allocated and the
+  // bitmap closed in a finally.
+  async function encodeImage(file, name) {
+    let bitmap = null;
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      const px = bitmap.width * bitmap.height;
+      if (!Number.isFinite(px) || px <= 0) throw new Error('This image could not be read');
+      if (px > IMAGE_MAX_PX) {
+        addSystem('An image was refused: ' + px + ' pixels is over the 60 MP re-encode limit, and the original was not sent.');
+        return null;
+      }
+      let w = bitmap.width;
+      let h = bitmap.height;
+      const long = Math.max(w, h);
+      if (long > IMAGE_LONG_EDGE) {
+        const k = IMAGE_LONG_EDGE / long;
+        w = Math.max(1, Math.round(w * k));
+        h = Math.max(1, Math.round(h * k));
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d', { alpha: true });
+      if (!ctx) throw new Error('This image could not be re-encoded');
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      const wantWebp = await probeWebp();
+      const ladder = [0.8, 0.7, 0.55];
+      let blob = null;
+      let halves = 0;
+      for (let step = 0; step < 6; step++) {
+        const q = ladder[Math.min(step, ladder.length - 1)];
+        const type = wantWebp ? 'image/webp' : 'image/jpeg';
+        blob = await new Promise((resolve) => canvas.toBlob(resolve, type, q));
+        if (!blob) throw new Error('This image could not be re-encoded');
+        if (blob.type !== type) throw new Error('The encoder returned ' + blob.type + ' instead of ' + type);
+        if (blob.size <= IMAGE_TARGET) break;
+        if (step === ladder.length - 1 && halves === 0 && blob.size > 1536 * 1024) {
+          halves++;
+          const c2 = document.createElement('canvas');
+          c2.width = Math.max(1, Math.round(canvas.width / 2));
+          c2.height = Math.max(1, Math.round(canvas.height / 2));
+          const x2 = c2.getContext('2d', { alpha: true });
+          if (!x2) break;
+          x2.drawImage(canvas, 0, 0, c2.width, c2.height);
+          canvas.width = c2.width;
+          canvas.height = c2.height;
+          canvas.getContext('2d', { alpha: true }).drawImage(c2, 0, 0);
+          step = -1;
+        }
+      }
+      if (!blob || !blob.size) throw new Error('This image could not be re-encoded');
+      const finalName = String(name || synthName(blob.type, 'image')).replace(/\.[^.]+$/, '') + (blob.type === 'image/webp' ? '.webp' : '.jpg');
+      return new File([blob], finalName, { type: blob.type });
+    } finally {
+      if (bitmap) bitmap.close();
+    }
+  }
+
+  function planBitrate(duration, width, height) {
+    if (!Number.isFinite(duration) || duration <= 0) return null;
+    if (duration > 600) return null;
+    const budget = Math.floor(VIDEO_CAP * 0.90);
+    const audio = Math.floor((96000 / 8) * duration);
+    const videoBytes = budget - audio;
+    if (videoBytes <= 0) return null;
+    const bitrate = Math.max(120000, Math.floor((videoBytes * 8) / duration));
+    const maxH = duration <= 60 ? 1080 : duration <= 180 ? 720 : 480;
+    const ar = width && height ? width / height : 16 / 9;
+    let h = Math.min(height || maxH, maxH);
+    let w = Math.round(h * ar);
+    if (w % 2) w++;
+    if (h % 2) h++;
+    return { bitrate: bitrate, width: Math.max(2, w), height: Math.max(2, h), projected: budget, seconds: Math.ceil(duration * 1.04) };
+  }
+
+  function probeVideo(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      urls.push(url);
+      const v = document.createElement('video');
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = 'metadata';
+      const timer = setTimeout(() => { cleanup(); reject(new Error('This video could not be read')); }, 10000);
+      const cleanup = () => {
+        clearTimeout(timer);
+        v.removeAttribute('src');
+        try { v.load(); } catch (_) {}
+      };
+      v.onloadedmetadata = () => {
+        const out = { duration: v.duration, width: v.videoWidth, height: v.videoHeight, url: url };
+        cleanup();
+        resolve(out);
+      };
+      v.onerror = () => { cleanup(); reject(new Error('This video cannot be decoded here')); };
+      v.src = url;
+    });
+  }
+
+  function createDraftCard(file, name, plan) {
+    const stick = atBottom();
+    const row = document.createElement('div');
+    row.className = 'msg has-file me';
+    const card = document.createElement('div');
+    card.className = 'file draft';
+    const head = document.createElement('div');
+    head.className = 'file-head';
+    const title = document.createElement('span');
+    title.className = 'file-name';
+    title.textContent = name;
+    const meta = document.createElement('span');
+    meta.className = 'file-size';
+    meta.textContent = formatSize(file.size);
+    head.append(title, meta);
+    const line = document.createElement('div');
+    line.className = 'draft-line';
+    line.textContent = 'Will be re-encoded to ' + plan.height + 'p, about ' + formatSize(plan.projected) + ', and about ' + plan.seconds + ' seconds of processing.';
+    const foot = document.createElement('div');
+    foot.className = 'file-foot';
+    const state = document.createElement('span');
+    state.textContent = 'not sent yet';
+    const send = document.createElement('button');
+    send.type = 'button';
+    send.className = 'btn primary small';
+    send.textContent = 'Send video';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn ghost small';
+    cancel.textContent = 'Cancel';
+    foot.append(state, send, cancel);
+    const video = document.createElement('video');
+    video.hidden = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.controls = true;
+    video.preload = 'metadata';
+    card.append(head, line, video, foot);
+    row.appendChild(card);
+    el.log.appendChild(row);
+    el.empty.hidden = true;
+    trimLog();
+    if (stick) scrollDown();
+    const draft = {
+      row: row,
+      state: (text) => { state.textContent = text; },
+      progress: (ratio) => { state.textContent = 'encoding ' + Math.round(ratio * 100) + '%'; },
+      fail: (text) => { state.textContent = text; send.disabled = true; },
+      error: (text) => { state.textContent = text; send.disabled = true; },
+      done: () => { state.textContent = 'sent'; },
+      preview: (url) => { video.src = url; video.hidden = false; },
+      close: () => { if (row.parentNode) row.parentNode.removeChild(row); }
+    };
+    cancel.addEventListener('click', () => {
+      draft.close();
+      addSystem('The prepared video was dropped, nothing was sent.');
+    });
+    send.addEventListener('click', () => {
+      send.disabled = true;
+      cancel.disabled = true;
+      transcodeAndSend(file, name, plan, draft).catch((error) => {
+        draft.fail(error && error.message ? error.message : 'encoding failed');
+        if (phase !== 'ended') addSystem('A video was not sent: ' + (error && error.message ? error.message : 'encoding failed'));
+      });
+    });
+    return draft;
+  }
+
+  async function prepareVideo(file, name, type) {
+    if (transcoding) {
+      addSystem('A video is already being prepared. One at a time.');
+      return;
+    }
+    if (file.size <= MAX_VIDEO) {
+      await sendBytes(file, name, type);
+      return;
+    }
+    let info;
+    try {
+      info = await probeVideo(file);
+    } catch (error) {
+      addSystem('A video was refused: ' + (error && error.message ? error.message : 'unreadable'));
+      return;
+    }
+    const plan = planBitrate(info.duration, info.width, info.height);
+    if (!plan) {
+      addSystem('A video was refused: it runs longer than 600 seconds, and a longer clip does not fit the 45 MB cap at a watchable bitrate. Trim it or send it as a file.');
+      return;
+    }
+    createDraftCard(file, name, plan);
+  }
+
+  function pickCanvas(plan) {
+    const canvas = document.createElement('canvas');
+    canvas.width = plan.width;
+    canvas.height = plan.height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    return ctx ? { canvas: canvas, ctx: ctx } : null;
+  }
+
+  async function transcodeA(file, plan, onProgress) {
+    if (typeof Mp4Muxer === 'undefined' || !Mp4Muxer || !Mp4Muxer.Muxer) throw new Error('the muxer is missing');
+    if (!('VideoEncoder' in window)) throw new Error('WebCodecs is missing');
+    const cfg = {
+      codec: 'avc1.640028',
+      width: plan.width,
+      height: plan.height,
+      bitrate: plan.bitrate,
+      framerate: 30,
+      hardwareAcceleration: 'prefer-hardware',
+      latencyMode: 'quality',
+      avc: { format: 'avc' }
+    };
+    const support = await VideoEncoder.isConfigSupported(cfg);
+    if (!support || !support.supported) throw new Error('H.264 encoding is not supported here');
+    const muxer = new Mp4Muxer.Muxer({
+      target: new Mp4Muxer.ArrayBufferTarget(),
+      video: { codec: 'avc', width: plan.width, height: plan.height },
+      fastStart: 'in-memory'
+    });
+    let firstMeta = null;
+    let encError = null;
+    const encoder = new VideoEncoder({
+      output(chunk, meta) {
+        if (!firstMeta) firstMeta = meta;
+        muxer.addVideoChunk(chunk, meta);
+      },
+      error(e) { encError = e; }
+    });
+    encoder.configure(cfg);
+    const url = URL.createObjectURL(file);
+    urls.push(url);
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    const down = pickCanvas(plan);
+    try {
+      video.src = url;
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error('This video cannot be decoded here'));
+      });
+      const duration = video.duration;
+      if (!Number.isFinite(duration) || duration <= 0) throw new Error('This video has no readable duration');
+      let frames = 0;
+      let lastTick = 0;
+      video.currentTime = 0;
+      await new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve();
+        };
+        const fail = (e) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(e && e.message ? e : new Error('encode failed'));
+        };
+        const cleanup = () => {
+          video.removeEventListener('ended', finish);
+          video.removeEventListener('error', onError);
+          if ('cancelVideoFrameCallback' in video && id) video.cancelVideoFrameCallback(id);
+        };
+        const onError = () => fail(new Error('Video playback failed during encode'));
+        video.addEventListener('ended', finish);
+        video.addEventListener('error', onError);
+        const onFrame = (now, meta) => {
+          if (settled) return;
+          if (encError) { fail(new Error('encoder error: ' + (encError.message || 'unknown'))); return; }
+          const ts = Math.round((meta && Number.isFinite(meta.mediaTime) ? meta.mediaTime : video.currentTime) * 1e6);
+          let frame;
+          try {
+            if (down) {
+              down.ctx.drawImage(video, 0, 0, plan.width, plan.height);
+              frame = new VideoFrame(down.canvas, { timestamp: ts });
+            } else {
+              frame = new VideoFrame(video, { timestamp: ts });
+            }
+            encoder.encode(frame, { keyFrame: frames % 60 === 0 });
+          } finally {
+            if (frame) frame.close();
+          }
+          frames++;
+          if (now - lastTick > 500) {
+            lastTick = now;
+            onProgress(Math.min(0.99, video.currentTime / duration));
+          }
+          if (encoder.encodeQueueSize > 8) {
+            video.pause();
+            encoder.addEventListener('dequeue', () => {
+              if (!settled) video.play().catch(() => {});
+            }, { once: true });
+          }
+          if (!settled) id = video.requestVideoFrameCallback(onFrame);
+        };
+        let id = video.requestVideoFrameCallback(onFrame);
+        video.play().catch((e) => fail(e));
+      });
+      if (encError) throw new Error('encoder error: ' + (encError.message || 'unknown'));
+      await encoder.flush();
+      if (!firstMeta || !firstMeta.decoderConfig) throw new Error('the first encoded chunk carried no decoderConfig');
+      muxer.finalize();
+      onProgress(1);
+      const buffer = muxer.target.buffer;
+      if (!buffer || !buffer.byteLength) throw new Error('the muxer produced no bytes');
+      return { blob: new Blob([buffer], { type: 'video/mp4' }), engine: 'webcodecs' };
+    } finally {
+      try { encoder.close(); } catch (_) {}
+      try { video.pause(); } catch (_) {}
+      video.removeAttribute('src');
+      try { video.load(); } catch (_) {}
+    }
+  }
+
+  async function transcodeB(file, plan, onProgress) {
+    const mime = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.640028') ? 'video/mp4' : (MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm' : '');
+    if (!window.MediaRecorder || !mime) throw new Error('No video encoder is available in this browser');
+    const down = pickCanvas(plan);
+    if (!down) throw new Error('Could not allocate the encode canvas');
+    const url = URL.createObjectURL(file);
+    urls.push(url);
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.src = url;
+    try {
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error('This video cannot be decoded here'));
+      });
+      const duration = video.duration;
+      const stream = down.canvas.captureStream(30);
+      const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: plan.bitrate });
+      const parts = [];
+      rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) parts.push(ev.data); };
+      const stopped = new Promise((resolve) => { rec.onstop = resolve; });
+      await new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          try { rec.stop(); } catch (_) {}
+          resolve();
+        };
+        const onError = () => reject(new Error('Video playback failed during recording'));
+        video.addEventListener('ended', finish);
+        video.addEventListener('error', onError);
+        const onFrame = (now, meta) => {
+          if (settled) return;
+          down.ctx.drawImage(video, 0, 0, plan.width, plan.height);
+          onProgress(Math.min(0.99, video.currentTime / duration));
+          video.requestVideoFrameCallback(onFrame);
+        };
+        rec.start(250);
+        video.requestVideoFrameCallback(onFrame);
+        video.play().catch((e) => reject(e));
+      });
+      await stopped;
+      const blob = new Blob(parts, { type: mime });
+      if (!blob.size) throw new Error('the recorder produced no bytes');
+      return { blob: blob, engine: mime === 'video/mp4' ? 'recorder-mp4' : 'recorder-webm' };
+    } finally {
+      try { video.pause(); } catch (_) {}
+      video.removeAttribute('src');
+      try { video.load(); } catch (_) {}
+    }
+  }
+
+  async function transcodeAndSend(file, name, plan, draft) {
+    if (transcoding) throw new Error('one video at a time');
+    transcoding = true;
+    try {
+      let out;
+      try {
+        draft.state('encoding with WebCodecs');
+        out = await transcodeA(file, plan, draft.progress);
+      } catch (error) {
+        if (phase === 'ended') throw error;
+        addSystem('WebCodecs could not encode this clip (' + (error && error.message ? error.message : 'failed') + '). Falling back to MediaRecorder.');
+        draft.state('encoding with MediaRecorder');
+        out = await transcodeB(file, plan, draft.progress);
+      }
+      let blob = out.blob;
+      if (blob.size > VIDEO_CAP) {
+        const retry = Math.max(120000, Math.round(plan.bitrate * (VIDEO_CAP / blob.size) * 0.95));
+        addSystem('The first encode reached ' + formatSize(blob.size) + ', over the 45 MB cap. Retrying once at a lower bitrate.');
+        const plan2 = Object.assign({}, plan, { bitrate: retry });
+        out = await transcodeA(file, plan2, draft.progress);
+        blob = out.blob;
+        if (blob.size > VIDEO_CAP) {
+          throw new Error('the result is still ' + formatSize(blob.size) + ' after one retry, so it was not sent');
+        }
+      }
+      const outName = String(name || 'video').replace(/\.[^.]+$/, '') + (blob.type === 'video/webm' ? '.webm' : '.mp4');
+      draft.state('sending ' + formatSize(blob.size) + ' (' + out.engine + ')');
+      await sendBytes(blob, outName, blob.type || 'video/mp4', draft);
+    } finally {
+      transcoding = false;
+    }
+  }
+
+  // R2-22: the only ingest entry point. Picker, drop and paste all route here,
+  // so the image re-encode and its metadata strip cannot be skipped.
+  async function acceptFile(file, source) {
+    if (phase !== 'live') { toast('Verify the safety number first'); return; }
+    if (!file || typeof file.size !== 'number') return;
+    if (!file.size) { toast('That file is empty'); return; }
+    const type = String(file.type || '').toLowerCase();
+    const name = cleanName(file.name || synthName(type, source || 'file'));
+    if (isAnimated(type)) return sendBytes(file, name, type || 'application/octet-stream');
+    if (isImageType(type)) {
+      const out = await encodeImage(file, name);
+      if (!out) return;
+      return sendBytes(out, out.name, out.type);
+    }
+    if (isVideoType(type)) return prepareVideo(file, name, type);
+    return sendBytes(file, name, type || 'application/octet-stream');
+  }
+
+  function queueFiles(files, source) {
     if (phase !== 'live') return;
     for (const file of Array.from(files || [])) {
       sendQueue = sendQueue
-        .then(() => sendFile(file))
+        .then(() => acceptFile(file, source || 'pick'))
         .catch((error) => {
           if (phase !== 'ended') toast(error && error.message ? error.message : 'File failed', 5000);
         });
     }
   }
 
-  async function sendFile(file) {
+  async function sendBytes(blob, name, type, existingCard) {
     if (phase !== 'live') throw new Error('Not verified');
     if (!connected || !dc || dc.readyState !== 'open') throw new Error('Not connected');
-    if (!file.size) throw new Error('"' + file.name + '" is empty');
-    if (file.size > MAX_FILE) throw new Error('"' + file.name + '" is over ' + formatSize(MAX_FILE));
-    const type = file.type || 'application/octet-stream';
-    const name = cleanName(file.name);
+    if (!blob || !blob.size) throw new Error('"' + name + '" is empty');
+    if (blob.size > MAX_FILE) throw new Error('"' + name + '" is over ' + formatSize(MAX_FILE));
+    const kind = type || 'application/octet-stream';
+    const cleanType = kind.slice(0, 120);
     const id = randomHex(16);
-    const chunks = Math.ceil(file.size / CHUNK);
-    const card = createFileCard(name, file.size, true, type);
+    const chunks = Math.ceil(blob.size / CHUNK);
+    const card = existingCard && existingCard.row ? existingCard : createFileCard(name, blob.size, true, cleanType);
     sending = true;
     lastProgress = Date.now();
     let url = '';
     try {
-      if (/^image\/(png|jpe?g|gif|webp|avif)$/i.test(type)) {
-        url = URL.createObjectURL(file);
+      if (/^image\//i.test(cleanType) || /^video\//i.test(cleanType)) {
+        url = URL.createObjectURL(blob);
         urls.push(url);
-        card.img.src = url;
-        card.img.hidden = false;
+        rowUrls.set(card.row, url);
+        card.preview(url);
       }
       await sendControl({
         k: 'file-start',
         id: id,
         name: name,
-        size: file.size,
-        type: type.slice(0, 120),
+        size: blob.size,
+        type: cleanType,
         chunks: chunks
-      }, { id: id, size: file.size, chunks: chunks });
+      }, { id: id, size: blob.size, chunks: chunks });
       let offset = 0;
       let index = 0;
       let lastPercent = -1;
-      while (offset < file.size) {
+      while (offset < blob.size) {
         if (!dc || dc.readyState !== 'open') {
           card.error('connection lost');
           throw new Error('Connection lost');
         }
-        const end = Math.min(offset + CHUNK, file.size);
-        const buffer = await file.slice(offset, end).arrayBuffer();
+        const end = Math.min(offset + CHUNK, blob.size);
+        const buffer = await blob.slice(offset, end).arrayBuffer();
         const ct = await call('chunk', { id: id, index: index, data: buffer }, 20000);
         const frame = new Uint8Array(ct.length + 1);
         frame[0] = 2;
@@ -1995,19 +2995,19 @@ self.onmessage = function (ev) {
         offset = end;
         index++;
         lastProgress = Date.now();
-        const percent = Math.floor((offset / file.size) * 100);
+        const percent = Math.floor((offset / blob.size) * 100);
         if (percent !== lastPercent) {
           lastPercent = percent;
           card.progress(percent / 100);
         }
         await drain();
       }
-      const digest = await sha256Hex(new Uint8Array(await file.arrayBuffer()));
+      const digest = await sha256Hex(new Uint8Array(await blob.arrayBuffer()));
       await sendControl({ k: 'file-end', id: id, digest: digest });
       card.done(url, false);
-      retained.push({ url: url, row: card.row, size: file.size });
+      retained.push({ url: url, row: card.row, size: blob.size, name: name, type: cleanType });
       receivedFiles++;
-      receivedBytes += file.size;
+      receivedBytes += blob.size;
       evict();
     } finally {
       sending = false;
@@ -2015,11 +3015,16 @@ self.onmessage = function (ev) {
     }
   }
 
+  async function sendFile(file) {
+    return acceptFile(file, 'pick');
+  }
+
   async function createInvite() {
     if (phase === 'ended') return;
     el.create.disabled = true;
     closePeer();
     phase = 'pairing';
+    showScreen('S1');
     setStatus('gathering route...', 'wait');
     el.offer.value = '';
     el.answer.value = '';
@@ -2058,6 +3063,7 @@ self.onmessage = function (ev) {
       el.connect.disabled = false;
       setStatus('waiting for reply', 'wait');
       toast('Invite ready. It expires in 120 seconds.');
+      startTtl();
       el.offer.focus();
       el.offer.select();
     } catch (error) {
@@ -2072,6 +3078,7 @@ self.onmessage = function (ev) {
     el.join.disabled = true;
     closePeer();
     phase = 'pairing';
+    showScreen('S1');
     setStatus('reading invite...', 'wait');
     el.answer.value = '';
     el.copyAnswer.disabled = true;
@@ -2207,6 +3214,9 @@ self.onmessage = function (ev) {
       }
       rekeying = false;
       el.rotate.disabled = false;
+      lastRekeyAt = Date.now();
+      rekeyCount++;
+      updateChips();
       addSystem('Key rotation acknowledged and verified. Both chains were reset.');
     }).catch(() => endSession('rekey'));
   }
@@ -2285,6 +3295,10 @@ self.onmessage = function (ev) {
       });
       const m = { sid: sidNew, fp: fp, peerFp: '', role: 'offer', pc: pcNew, dc: null, code: code, selfSdp: sdp, peerSdp: '', keys: keys, peerKeys: null, mineVerified: false, peerVerified: false, doneSent: false };
       mig = m;
+      slots.pending = { pc: pcNew, dc: dcNew, sid: sidNew };
+      el.strip.hidden = false;
+      el.strip.textContent = 'Preparing a new session, step 1 of 4.';
+      el.log.classList.add('locked');
       bindPending(dcNew, m);
       await sendControl({ k: 'mig', step: 'offer', nsid: sidNew, fp: fp, code: code });
       migTimer = setTimeout(() => migFail('timeout'), 15000);
@@ -2332,6 +3346,10 @@ self.onmessage = function (ev) {
       });
       const m = { sid: nsid, fp: fp, peerFp: String(msg.fp), role: 'answer', pc: pcNew, dc: null, code: code, selfSdp: sdp, peerSdp: env.sdp, keys: keys, peerKeys: { eph: env.eph_pk, stat: env.stat_pk }, mineVerified: false, peerVerified: false, doneSent: false };
       mig = m;
+      slots.pending = { pc: pcNew, dc: null, sid: nsid };
+      el.strip.hidden = false;
+      el.strip.textContent = 'Preparing a new session, step 2 of 4.';
+      el.log.classList.add('locked');
       await sendControl({ k: 'mig', step: 'answer', nsid: m.sid, fp: fp, code: code, check: check });
       migTimer = setTimeout(() => migFail('timeout'), 15000);
       addSystem('Peer started a migration. Answer sent.');
@@ -2388,7 +3406,10 @@ self.onmessage = function (ev) {
       try { if (oldPc) oldPc.close(); } catch (_) {}
       pc = m.pc;
       dc = m.dc;
-      dc.addEventListener('message', onWire);
+      dc.addEventListener('message', onWireQueued);
+      slots.pending = null;
+      el.strip.hidden = true;
+      el.log.classList.remove('locked');
       sessionSid = m.sid;
       seqOut = 0;
       seqIn = 0;
@@ -2399,8 +3420,15 @@ self.onmessage = function (ev) {
       peerConfirm = false;
       phase = 'confirm';
       el.log.replaceChildren();
+      reactions.clear();
+      msgRows.clear();
+      reactMarks = 0;
+      slots.active = { pc: m.pc, dc: m.dc, sid: m.sid, log: [] };
+      lastRekeyAt = Date.now();
+      rekeyCount = 0;
       addSystem('Migrated to a new connection with new codes and a new certificate.');
       showSas();
+      showScreen('S2');
       el.input.disabled = true;
       el.send.disabled = true;
       el.attach.disabled = true;
@@ -2408,6 +3436,7 @@ self.onmessage = function (ev) {
       el.migrate.disabled = true;
       el.verifyState.textContent = 'New identity. Compare the new safety number.';
       setStatus('connected, verify', 'wait');
+      updateChips();
     } catch (e) {
       endSession('migration-failed');
     }
@@ -2420,6 +3449,9 @@ self.onmessage = function (ev) {
       try { if (mig.pc) mig.pc.close(); } catch (_) {}
     }
     mig = null;
+    slots.pending = null;
+    el.strip.hidden = true;
+    el.log.classList.remove('locked');
     call('migDrop').catch(() => {});
   }
 
@@ -2430,6 +3462,9 @@ self.onmessage = function (ev) {
       try { if (mig.pc) mig.pc.close(); } catch (_) {}
     }
     mig = null;
+    slots.pending = null;
+    el.strip.hidden = true;
+    el.log.classList.remove('locked');
     call('migDrop').catch(() => {});
     endSession('migration-failed', reason);
   }
@@ -2482,6 +3517,161 @@ self.onmessage = function (ev) {
     endSession('wipe');
   }
 
+  // UX-03: one screen at a time, S0 to S5, no router and no history entries.
+  function showScreen(name) {
+    document.body.dataset.screen = name;
+    const chat = name === 'S2' || name === 'S3';
+    el.pairing.hidden = chat || name === 'S4';
+    el.chat.hidden = !chat;
+    el.ended.hidden = name !== 'S4';
+    el.chips.hidden = name !== 'S2' && name !== 'S3';
+    if (name === 'S4') {
+      el.restart.focus();
+    } else if (name === 'S3') {
+      el.input.focus();
+    } else if (name === 'S2') {
+      el.digits.tabIndex = -1;
+      el.digits.focus();
+    } else if (name === 'S1') {
+      el.offer.focus();
+    } else if (name === 'S0') {
+      el.create.focus();
+    }
+  }
+
+  function updateChips() {
+    if (phase === 'idle' || phase === 'ended') {
+      el.chips.hidden = true;
+      return;
+    }
+    el.chips.hidden = false;
+    el.chipSuite.textContent = suiteLabel || 'suite';
+    el.chipVerify.textContent = localConfirm && peerConfirm
+      ? 'verified'
+      : localConfirm ? 'waiting for peer' : peerConfirm ? 'waiting for you' : 'unverified';
+    el.chipVerify.dataset.tone = localConfirm && peerConfirm ? 'ok' : 'wait';
+    const age = lastRekeyAt ? Date.now() - lastRekeyAt : 0;
+    el.chipRatchet.textContent = lastRekeyAt
+      ? (rekeyCount ? 'rotated ' + Math.max(0, Math.floor(age / 60000)) + ' min ago' : 'keys ' + Math.max(0, Math.floor(age / 60000)) + ' min old')
+      : 'keys new';
+    el.chipRatchet.dataset.tone = age > RATCHET_AGE_MS ? 'wait' : 'ok';
+    el.chipFiles.textContent = 'Files ' + retained.length;
+    el.aging.hidden = !(phase === 'live' && age > RATCHET_AGE_MS && Date.now() - agingDismissedAt > 10 * 60 * 1000);
+  }
+
+  function startTtl() {
+    clearInterval(ttlTimer);
+    offerIssuedAt = Date.now();
+    const tick = () => {
+      const left = Math.max(0, TTL_MS - (Date.now() - offerIssuedAt));
+      el.offerTtl.textContent = left ? 'Code expires in ' + Math.ceil(left / 1000) + ' s.' : 'Code expired. Generate a new invite.';
+      if (!left) {
+        clearInterval(ttlTimer);
+        el.connect.disabled = true;
+      }
+    };
+    tick();
+    ttlTimer = setInterval(tick, 1000);
+  }
+
+  let pairCheckTimer = 0;
+  function pairPreview() {
+    clearTimeout(pairCheckTimer);
+    pairCheckTimer = setTimeout(() => {
+      const text = el.offerIn.value.trim();
+      if (!text) { el.pairState.textContent = ''; return; }
+      unpackCode(text).then((env) => {
+        if (phase === 'ended') return;
+        const age = Math.max(0, Math.round((Date.now() - env.ts) / 1000));
+        el.pairState.textContent = 'Code for ' + fpOf(env.sdp).slice(0, 6) + ', ' + env.suite + ', issued ' + age + ' s ago.';
+      }).catch((error) => {
+        if (phase === 'ended') return;
+        el.pairState.textContent = error && error.message ? error.message : 'That code could not be read';
+      });
+    }, 250);
+  }
+
+  function renderGallery() {
+    el.galleryGrid.replaceChildren();
+    retained.forEach((item) => {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.draggable = false;
+      tile.addEventListener('dragstart', (event) => event.preventDefault());
+      if (item.url && /^image\//i.test(item.type || '')) {
+        const im = document.createElement('img');
+        im.src = item.url;
+        im.alt = '';
+        im.draggable = false;
+        tile.appendChild(im);
+      } else if (item.url && /^video\//i.test(item.type || '')) {
+        const v = document.createElement('video');
+        v.src = item.url;
+        v.muted = true;
+        v.playsInline = true;
+        v.preload = 'metadata';
+        v.controls = true;
+        v.draggable = false;
+        tile.appendChild(v);
+      }
+      const name = document.createElement('div');
+      name.className = 'tile-name';
+      name.textContent = item.name || 'file';
+      const meta = document.createElement('div');
+      meta.textContent = formatSize(item.size || 0);
+      const acts = document.createElement('div');
+      acts.className = 'tile-actions';
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn ghost small';
+      del.textContent = 'Delete';
+      del.addEventListener('click', () => deleteRetained(item));
+      acts.appendChild(del);
+      tile.append(name, meta, acts);
+      el.galleryGrid.appendChild(tile);
+    });
+    const total = retained.length + evictedCount;
+    el.galleryNote.textContent = evictedCount
+      ? retained.length + ' of ' + total + ' files retained. Older files were dropped.'
+      : '';
+  }
+
+  function openGallery() {
+    if (phase !== 'live' && phase !== 'confirm') return;
+    el.gallery.hidden = false;
+    renderGallery();
+    el.galleryClose.focus();
+  }
+
+  function closeGallery() {
+    el.gallery.hidden = true;
+  }
+
+  function deleteRetained(item) {
+    // DOM first, then the URL, then the array entry.
+    if (item.row && item.row.parentNode) item.row.parentNode.removeChild(item.row);
+    rowUrls.delete(item.row);
+    const i = urls.indexOf(item.url);
+    if (i >= 0) urls.splice(i, 1);
+    if (item.url) {
+      try { URL.revokeObjectURL(item.url); } catch (_) {}
+    }
+    const j = retained.indexOf(item);
+    if (j >= 0) retained.splice(j, 1);
+    renderGallery();
+    updateChips();
+  }
+
+  function openAbout() {
+    el.aboutDiag.textContent = 'build w13-ephemeral-build-r2b, route: ' + (el.route.textContent || 'not measured') + ', retained files: ' + retained.length + ', reactions: ' + reactMarks + ', rekeys: ' + (lastRekeyAt ? 1 : 0) + '.';
+    el.about.hidden = false;
+    el.aboutClose.focus();
+  }
+
+  function closeAbout() {
+    el.about.hidden = true;
+  }
+
   el.create.addEventListener('click', createInvite);
   el.join.addEventListener('click', joinSession);
   el.connect.addEventListener('click', acceptAnswer);
@@ -2505,6 +3695,13 @@ self.onmessage = function (ev) {
   el.badSas.addEventListener('click', rejectSas);
   el.restart.addEventListener('click', () => location.reload());
   el.attach.addEventListener('click', () => el.file.click());
+  el.chipFiles.addEventListener('click', openGallery);
+  el.galleryClose.addEventListener('click', closeGallery);
+  el.chipAbout.addEventListener('click', openAbout);
+  el.aboutClose.addEventListener('click', closeAbout);
+  el.agingRotate.addEventListener('click', doRotate);
+  el.agingLater.addEventListener('click', () => { agingDismissedAt = Date.now(); updateChips(); });
+  el.offerIn.addEventListener('input', pairPreview);
 
   el.input.addEventListener('input', autoSize);
   el.input.addEventListener('keydown', (event) => {
@@ -2516,7 +3713,7 @@ self.onmessage = function (ev) {
 
   el.file.addEventListener('change', () => {
     bump();
-    queueFiles(el.file.files);
+    queueFiles(el.file.files, 'pick');
     el.file.value = '';
   });
 
@@ -2538,7 +3735,7 @@ self.onmessage = function (ev) {
         return;
       }
       bump();
-      queueFiles(event.dataTransfer && event.dataTransfer.files);
+      queueFiles(event.dataTransfer && event.dataTransfer.files, 'drop');
     }, { capture: true, passive: false });
   });
   el.chat.addEventListener('dragleave', () => el.chat.classList.remove('drag'));
@@ -2548,7 +3745,8 @@ self.onmessage = function (ev) {
     const files = event.clipboardData && event.clipboardData.files;
     if (files && files.length) {
       event.preventDefault();
-      queueFiles(files);
+      bump();
+      queueFiles(files, 'paste');
     }
   }, { capture: true });
 
@@ -2558,6 +3756,14 @@ self.onmessage = function (ev) {
 
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
+    if (palettePop || !el.gallery.hidden || !el.about.hidden) {
+      if (palettePop) closePalette();
+      if (!el.gallery.hidden) closeGallery();
+      if (!el.about.hidden) closeAbout();
+      escAt = 0;
+      event.preventDefault();
+      return;
+    }
     const now = Date.now();
     if (now - escAt < 800) {
       event.preventDefault();
@@ -2566,6 +3772,15 @@ self.onmessage = function (ev) {
     }
     escAt = now;
   }, { capture: true });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'r' && event.key !== 'R') return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const row = document.activeElement && document.activeElement.closest ? document.activeElement.closest('.msg[data-mid]') : null;
+    if (!row) return;
+    event.preventDefault();
+    openPalette(row.dataset.mid, row.querySelector('.react-add'));
+  });
 
   idleTimer = setInterval(checkIdle, IDLE_CHECK_MS);
   transferTimer = setInterval(checkTransferTimeout, 5000);
@@ -2595,6 +3810,13 @@ self.onmessage = function (ev) {
     urls.splice(0).forEach((url) => {
       try { URL.revokeObjectURL(url); } catch (_) {}
     });
+    rowUrls.clear();
+    reactions.clear();
+    msgRows.clear();
+    retained.length = 0;
+    el.gallery.hidden = true;
+    el.about.hidden = true;
+    if (palettePop) closePalette();
     try { worker.postMessage({ t: 'wipe', rid: 0 }); } catch (_) {}
     try { worker.terminate(); } catch (_) {}
   });
@@ -2606,6 +3828,9 @@ self.onmessage = function (ev) {
 
   checkIdle();
   setStatus('not connected');
+  showScreen('S0');
+  probeWebp();
+  chipTimer = setInterval(updateChips, 30000);
 })();
 </script>
 </body>

@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": 164354,
+  "app_sha256": "555b13e54f0f6465e732bfebf7e0ebf018822f1781e820e6e7ad204968970f87",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "stun",
+    "--app",
+    "03-build/output/ephemeral-chat-v2.html"
+  ],
+  "case": "stun",
+  "detail": "",
+  "duration_s": 6.03,
+  "exit": 0,
+  "run": "2026-11-27T01:43:35+0100"
+}
