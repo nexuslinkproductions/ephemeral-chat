@@ -4,7 +4,7 @@ Security hardening engagement for "ephemeral", Marcel's single-file WebRTC chat.
 
 ## Out of scope
 
-- No public repo. Owner ruling 2026-11-26: a private repo named ephemeral-chat under the active gh account is created once the first completed iteration lands, with nixfred invited. Nothing public and no push beyond that private remote until the owner says ship.
+- No public repo. Owner ruling 2026-11-26: a private repo named ephemeral-chat under the active gh account is created once the first completed iteration lands, with nixfred invited. Owner ruling 2026-11-27: Aleksey means GitHub aleksz179, Aleksejs Zuravlovs; the account aleksey, Aleksey Ponomarev, is the wrong person and its invite was cancelled the same day. Nothing public and no push beyond that private remote until the owner says ship.
 - input/ is read-only source material. Workers never edit it.
 - No client or third-party personal data in this workspace.
 - Workers write only inside their declared output scope.
