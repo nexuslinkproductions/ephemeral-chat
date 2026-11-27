@@ -62,8 +62,8 @@ blueprint 6.1: quarterly, or on a Chromium critical.
 The core pin is 64 hex characters in `main.cjs`, compared with `crypto.timingSafeEqual`
 against the bytes read from the asar. The served response is that same Buffer, so there is
 no check then load window. The constant currently holds
-`d4d48d3711acc8a32ba1fca97faa02e2690bc2ef6ff3487434aba36c5c618742`, the reviewed V2 artifact
-at 165,744 bytes. A release build reruns `scripts/pin-core.sh` through `scripts/build-gate.sh`
+`2092e0e9e8e3418ba167e22b99623094e0f5d05ea876014874be1e3c4b53b87b`, the reviewed V2 artifact
+at 169,810 bytes. A release build reruns `scripts/pin-core.sh` through `scripts/build-gate.sh`
 after the core is final, and the constant is updated to that final hash before packaging. An
 all zero constant fails closed: no window, exit 1, with the expected and actual hash in stderr
 and a native dialog. A real constant that no longer matches fails the same way. The build gate
