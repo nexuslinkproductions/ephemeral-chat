@@ -1,0 +1,20 @@
+{
+  "name": "ephemeral-shell",
+  "productName": "ephemeral",
+  "version": "2.0.0",
+  "private": true,
+  "description": "EXEC-ONLY Electron shell for the ephemeral chat core. Static files in this round: no install, no binary build.",
+  "main": "main.cjs",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "45.5.0",
+    "@electron/fuses": "2.1.3"
+  },
+  "scripts": {
+    "start": "electron .",
+    "fuses:read": "sh scripts/fuses.sh read",
+    "fuses:write": "sh scripts/fuses.sh write",
+    "hashes": "sh scripts/hash-artifacts.sh",
+    "selfcheck": "sh scripts/selfcheck.sh"
+  }
+}
