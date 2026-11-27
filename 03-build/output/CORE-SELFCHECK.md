@@ -1,5 +1,7 @@
 # CORE lane self-check, R2b, media and UX cards
 
+> Current artifact after the W18 fix lane: sha256 `d4d48d37...`, 165744 bytes. This W13 block is the historical record of that run; the W18 section at the end is the current state.
+
 RUN: w13-ephemeral-build-r2b-20261127
 ARTIFACT: 03-build/output/ephemeral-chat-v2.html
 SHA-256: 6c8c1283047f6ce7d3b926e6fd190d3c46b345926aa0142e02827cf2dc02558d
@@ -478,3 +480,232 @@ Each one traced to the gate harness, not to the artifact. None of these can be f
 
 - The gate harness still has no JS dialog handler, so any case that clicks Wipe stops at the confirm prompt.
 - The probes lane was editing `probes/gate.py` in parallel during this run; the raw output above is the exact state seen at this artifact hash. The lead's integration run is the authority.
+
+# W18 fix lane, A8 bulk kill and gallery budget
+
+RUN: w18-ephemeral-fix-two-20261127
+ARTIFACT: 03-build/output/ephemeral-chat-v2.html
+SHA-256: d4d48d3711acc8a32ba1fca97faa02e2690bc2ef6ff3487434aba36c5c618742
+BYTES: 165,744
+STATUS: complete. Both cards PASS. The 29 case suite is green in one run. The
+transcode case runs with no per chunk throttle. About ten minutes over the
+30 minute budget.
+
+Only writes: `03-build/output/ephemeral-chat-v2.html`, `probes/gate.py`, and this
+file. `wrapper/main.cjs` still names the old pin 6c8c1283 and was not touched;
+the lead repins it after review. No git command was run.
+
+## Card 1, A8 bulk transfer kill
+
+The burst budget now takes a bulk flag. A chunk frame spends the frame budget
+only when no accepted transfer is open. Text, control and unknown frames keep
+the full budget, so a flood of them still trips the rule.
+
+Artifact change:
+
+```
+countBytes(bytes.length, bytes[0] === 2 && !!incoming);
+
+function countBytes(n, bulk) {
+  const now = Date.now();
+  if (!bulk) {
+    frameTimes.push(now);
+    frameTimes = frameTimes.filter((t) => now - t < 5000);
+    if (frameTimes.length > 40) {
+      endSession('anomaly', 'A8 frame rate');
+      return;
+    }
+  }
+  if (!incoming) {
+    ... 2 MB/s byte rule unchanged
+```
+
+An authenticated chunk inside an accepted transfer is gated by the AEAD frame
+seal, the digest check and the receiver preallocation cap. A type 2 frame with
+no accepted transfer, an unknown type, or a text or control frame still counts.
+The 2 MB/s byte rule is unchanged and only runs when no transfer is open.
+
+The transcode case lost its `Blob.prototype.slice` 150 ms delay. The rung B
+output, 12.3 to 14 MB, now crosses the wire at full speed.
+
+Case, throttle removed:
+
+```
+$ python3 03-build/output/probes/gate.py transcode --app 03-build/output/ephemeral-chat-v2.html
+transcode engine A in this harness: function
+PASS transcode
+rc=0
+```
+
+Binding revert, scratch copy with the bulk argument removed and the same case
+shape, a 4 MiB bulk file, 64 chunk frames in one burst:
+
+```
+=== fixed artifact, 4 MiB
+seconds      3.5
+anchor_delta 1
+ended        'S3 | Session ended | Everything from this session was erased.'
+log_tail     '... File received and verified: bulk.bin'
+=== a8 reverted artifact, 4 MiB
+seconds      2.4
+anchor_delta 0
+ended        'S4 | Session killed | A protocol anomaly was detected (A8 frame rate). Everything was erased.'
+```
+
+The ended text node exists at every screen; the screen field is the signal. The
+reverted copy ends on S4 with the A8 frame rate detail and no Save anchor.
+
+Flood resistance stays:
+
+```
+$ python3 03-build/output/probes/gate.py budget --app 03-build/output/ephemeral-chat-v2.html
+PASS budget
+rc=0
+```
+
+`budget` still kills 45 sealed text frames in one burst and still names A8. It
+also still pins `frameTimes.length > 40` and the 2 MB byte rule.
+
+## Card 2, gallery budget
+
+Delete now decrements the retained counters, and a file start at the cap
+evicts the oldest retained media first, then proceeds.
+
+Artifact change:
+
+```
+    if (receivedFiles >= MAX_FILES) evict(1);
+...
+  function evict(need) {
+    const keep = MAX_FILES - (need || 0);
+    while (receivedFiles > keep || receivedBytes > MAX_SESSION_BYTES) {
+...
+    const j = retained.indexOf(item);
+    if (j >= 0) {
+      retained.splice(j, 1);
+      receivedFiles--;
+      receivedBytes -= item.size || 0;
+    }
+```
+
+The gallery case pins the three sites statically and now pins the budget
+behaviorally: four files fill the cap, a delete frees a slot, a fifth file is
+accepted, and a sixth at the cap evicts the oldest and names the drop.
+
+```
+$ python3 03-build/output/probes/gate.py gallery --app 03-build/output/ephemeral-chat-v2.html
+PASS gallery
+rc=0
+```
+
+Binding revert, scratch copy with the evict at cap and the delete decrement
+removed, five pasted images:
+
+```
+=== fixed artifact, five images
+after cap1: received=True refused=False evicted=False
+after cap2: received=True refused=False evicted=False
+after cap3: received=True refused=False evicted=False
+after cap4: received=True refused=False evicted=False
+after cap5: received=True refused=False evicted=True
+tiles       ['cap2.webp', 'cap3.webp', 'cap4.webp', 'cap5.webp']
+note        '4 of 5 files retained. Older files were dropped.'
+=== gallery reverted artifact, five images
+after cap1: received=True refused=False evicted=False
+after cap4: received=True refused=False evicted=False
+after cap5: received=False refused=True evicted=False
+tiles       ['cap1.webp', 'cap2.webp', 'cap3.webp', 'cap4.webp']
+note        ''
+log_tail    '... A file was refused (session file budget).'
+```
+
+The reverted copy never reaches the eviction path, exactly the W17 finding. The
+fixed copy evicts on the fifth start and keeps four tiles.
+
+## Harness changes, three
+
+- transcode: the throttle is gone. The case waits for HAVE_METADATA instead of
+  taking one snapshot, because the blob src attaches before metadata loads. The
+  old failure message called `v.get()` with no key and raised TypeError on the
+  error path; it now prints the node.
+- gallery: static pins retargeted to the new evict condition, plus the
+  behavioral cap block above.
+- nav: a pre-existing race, not caused by these cards. The strip is shown
+  immediately before the M1 send and hidden on adopt, so a 0.1 s poll can miss
+  it. Proven on a scratch copy with both cards reverted, rc=2,
+  `SKIP nav could not run: wait timed out: migration strip (False)`. Fixed by
+  recording the lock state in a MutationObserver on the strip itself, so the
+  assertion reads the state at the strip's own mutation. Two standalone runs
+  green, suite run green.
+
+## Suite, 29 cases, one run each
+
+Artifact hash `d4d48d37...`, 165744 bytes. Raw log `evidence/W18-suite-raw.log`.
+
+| # | Card | Case | Exit | Raw last line | Evidence |
+|---|---|---|---|---|---|
+| 1 | R2-01 | selftest | 0 | `PASS selftest` | `selftest-20261127-095239.json` |
+| 2 | R2-02 | envelope | 0 | `PASS envelope` | `envelope-20261127-095243.json` |
+| 3 | R2-03 | ratchet | 0 | `PASS ratchet` | `ratchet-20261127-095253.json` |
+| 4 | R2-04 | sas | 0 | `PASS sas` | `sas-20261127-095304.json` |
+| 5 | R2-05 | file | 0 | `PASS file` | `file-20261127-095313.json` |
+| 6 | R2-06 | budget | 0 | `PASS budget` | `budget-20261127-095325.json` |
+| 7 | R2-07 | code | 0 | `PASS code` | `code-20261127-095334.json` |
+| 8 | R2-08 | lifecycle | 0 | `PASS lifecycle` | `lifecycle-20261127-095348.json` |
+| 9 | R2-09 | kill | 0 | `PASS kill` | `kill-20261127-095405.json` |
+| 10 | R2-10 | rotate | 0 | `PASS rotate` | `rotate-20261127-095419.json` |
+| 11 | R2-11 | migrate | 0 | `PASS migrate` | `migrate-20261127-095431.json` |
+| 12 | R2-12 | stun | 0 | `PASS stun` | `stun-20261127-095449.json` |
+| 13 | R2-13 | cover | 0 | `PASS cover` | `cover-20261127-095455.json` |
+| 14 | R2-15 | mutation-all | 0 | `PASS mutation-all` | `mutation-all-20261127-095501.json` |
+| 15 | R2-16 | media-order | 0 | `PASS media-order` | `media-order-20261127-095654.json` |
+| 16 | R2-17 | exif | 0 | `PASS exif` | `exif-20261127-095703.json` |
+| 17 | R2-19 | bitrate | 0 | `PASS bitrate` | `bitrate-20261127-095711.json` |
+| 18 | R2-20 | playback | 0 | `PASS playback` | `playback-20261127-095711.json` |
+| 19 | R2-21 | imagecap | 0 | `PASS imagecap` | `imagecap-20261127-095724.json` |
+| 20 | R2-22 | paste | 0 | `PASS paste` | `paste-20261127-095733.json` |
+| 21 | UX-06 | panic | 0 | `PASS panic` | `panic-20261127-095740.json` |
+| 22 | UX-02 | react | 0 | `PASS react` | `react-20261127-095749.json` |
+| 23 | UX-01 | mid | 0 | `PASS mid` | `mid-20261127-095806.json` |
+| 24 | UX-03 | nav | 0 | `PASS nav` | `nav-20261127-095816.json` |
+| 25 | UX-07 | gallery | 0 | `PASS gallery` | `gallery-20261127-095830.json` |
+| 26 | UX-05 | pair | 0 | `PASS pair` | `pair-20261127-095841.json` |
+| 27 | UX-04 | sas-ui | 0 | `PASS sas-ui` | `sas-ui-20261127-095857.json` |
+| 28 | UX-08 | a11y | 0 | `PASS a11y` | `a11y-20261127-095913.json` |
+| 29 | R2-18 | transcode | 0 | `PASS transcode` | `transcode-20261127-095922.json` |
+
+`cover` ran with `--relay-host turn:127.0.0.1:5349`, as in W17.
+
+## Byte scan, W18
+
+```
+$ python3 - <<'EOF'
+import hashlib
+for p in ('03-build/output/ephemeral-chat-v2.html', '03-build/output/probes/gate.py'):
+    b = open(p, 'rb').read(); t = b.decode()
+    print(p, 'bytes=%d' % len(b), 'sha256=%s' % hashlib.sha256(b).hexdigest(),
+          'nonascii=%d' % sum(1 for x in b if x > 127),
+          'emdash=%d' % t.count('\u2014'), 'endash=%d' % t.count('\u2013'))
+EOF
+
+ephemeral-chat-v2.html bytes=165744 sha256=d4d48d3711acc8a32ba1fca97faa02e2690bc2ef6ff3487434aba36c5c618742 nonascii=0 emdash=0 endash=0
+probes/gate.py bytes=155841 sha256=0937ee7fe7fd88c928fc3aded66b3cd4312aaa3a4446b36b1eda1ab5fc75111a nonascii=0 emdash=0 endash=0
+```
+
+This file scans clean by the same script: 0 non-ASCII bytes, 0 em or en dashes.
+
+## Limits recorded, not hidden
+
+- The A8 exemption keys on the wire type byte and the accepted transfer flag.
+  The AEAD open runs after the count, so a forged chunk frame can enter the
+  exempt window, but the first failed chunk aborts the transfer and clears
+  `incoming`, which restores the budget. A flood of type 2 frames with no
+  accepted transfer still spends the full budget.
+- The transcode case still forces engine A unavailable so rung B runs live and
+  deterministic. A headed engine A run on a GPU box remains R4 work.
+- The gallery note counts retained plus evicted files, so a deleted file leaves
+  both counts and the "N of M" line undercounts by the number of deletes. The
+  case asserts the retained set and the eviction line, not the total. UX polish,
+  not a budget leak.
+- nav needed a harness fix before it could pass on this box. The race is
+  uncommon on a slower host and its failure mode is exit 2, never a false pass.

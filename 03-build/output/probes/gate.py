@@ -2439,7 +2439,29 @@ def case_nav(app, opts):
         expect_eq(visible, {'pairing': False, 'chat': True, 'ended': False, 'screen': 'S3'},
                   'S3 visible sections')
 
-        # Migration: the composer locks while the pending slot exists.
+        # Migration: the composer locks while the pending slot exists. The
+        # strip is shown right before the M1 send and hidden on adopt, so a
+        # poll can miss it. Record the state at the strip's own mutation.
+        a.js("""(() => {
+          window.__migLock = null;
+          const strip = document.querySelector('#strip');
+          const grab = () => {
+            if (window.__migLock || strip.hidden) return;
+            window.__migLock = {
+              screen: document.body.dataset.screen,
+              status: document.querySelector('#status').textContent,
+              input: document.querySelector('#input').disabled,
+              send: document.querySelector('#send').disabled,
+              attach: document.querySelector('#attach').disabled,
+              strip: !strip.hidden,
+              logLocked: document.querySelector('#log').classList.contains('locked'),
+              chan: window.__probe.snapshot().channels.filter(c => c.state === 'open').length
+            };
+          };
+          new MutationObserver(grab).observe(strip, { attributes: true, attributeFilter: ['hidden'], childList: true, subtree: true });
+          grab();
+          return true;
+        })()""")
         a.js("""(() => {
           const orig = RTCPeerConnection.prototype.setLocalDescription;
           window.__sld = orig;
@@ -2450,18 +2472,9 @@ def case_nav(app, opts):
           return true;
         })()""")
         click(a, '#migrate')
-        a.wait("(() => !document.querySelector('#strip').hidden)()", timeout=20, what='migration strip')
+        a.wait("(() => !!window.__migLock)()", timeout=25, what='migration strip')
         expect(a.js('document.body.dataset.screen') != 'S4', 'migration failed before the pending slot was observed')
-        locked = a.js("""(() => ({
-          screen: document.body.dataset.screen,
-          status: document.querySelector('#status').textContent,
-          input: document.querySelector('#input').disabled,
-          send: document.querySelector('#send').disabled,
-          attach: document.querySelector('#attach').disabled,
-          strip: !document.querySelector('#strip').hidden,
-          logLocked: document.querySelector('#log').classList.contains('locked'),
-          chan: window.__probe.snapshot().channels.filter(c => c.state === 'open').length
-        }))()""")
+        locked = a.js('window.__migLock')
         expect_eq(locked['screen'], 'S3', 'migration changed the screen')
         expect_eq(locked['status'], 'migrating', 'the strip is visible before the migrating status')
         expect_eq([locked['input'], locked['send'], locked['attach']], [True, True, True],
@@ -2512,8 +2525,12 @@ def case_gallery(app, opts):
            'delete revokes a blob before the message card is detached')
     expect('retained.indexOf(item)' in delete and 'retained.splice' in delete,
            'delete does not remove the one retained array entry')
+    expect('receivedFiles--' in delete, 'delete does not free a retained slot')
+    start = extract_js_function(text, 'onFileStart')
+    expect('evict(1)' in start, 'a new file at the cap does not evict the oldest first')
     evict = extract_js_function(text, 'evict')
-    expect('receivedFiles > MAX_FILES' in evict, 'eviction does not ride the file cap')
+    expect('const keep = MAX_FILES - (need || 0)' in evict and 'receivedFiles > keep' in evict,
+           'eviction does not ride the file cap with a caller reserve')
     expect(evict.index('parentNode.removeChild(first.row)') < evict.index('URL.revokeObjectURL(first.url)'),
            'eviction revokes before the row is detached')
     expect('evictedCount++' in evict, 'eviction does not count the drop')
@@ -2588,6 +2605,49 @@ def case_gallery(app, opts):
         click(a, '#chipFiles')
         expect_eq(a.js("document.querySelectorAll('#galleryGrid .tile').length"), 0,
                   'a bad digest produced a gallery tile')
+
+        # UX-07 budget, behavioral: delete frees a retained slot, and a new
+        # start at the cap evicts the oldest retained media then proceeds.
+        click(a, '#galleryClose')
+
+        def tile_bases():
+            return a.js("Array.from(document.querySelectorAll('#galleryGrid .tile-name'))"
+                        ".map((n) => n.textContent.replace(/\\.[^.]+$/, ''))") or []
+
+        def send_cap(name):
+            item = {'name': name + '.png', 'type': 'image/png',
+                    'b64': base64.b64encode(png_bytes(48, 48, metadata=False)).decode('ascii')}
+            dispatch_files(c, [item], 'paste')
+            expect(wait_log(a, r'File received and verified: ' + re.escape(name), 30),
+                   'a file at or under the cap was not received: ' + name)
+
+        for name in ('cap1', 'cap2', 'cap3', 'cap4'):
+            send_cap(name)
+        click(a, '#chipFiles')
+        expect_eq(tile_bases(), ['cap1', 'cap2', 'cap3', 'cap4'], 'the retained order at the cap')
+        expect(a.js("(() => { const t = document.querySelector('#galleryGrid .tile');"
+                    " const b = Array.from(t.querySelectorAll('button')).find(x => x.textContent === 'Delete');"
+                    " if (!b) return false; b.click(); return true; })()"),
+               'the tile Delete control did not fire at the cap')
+        time.sleep(0.4)
+        expect_eq(a.js("document.querySelector('#chipFiles').textContent"), 'Files 3',
+                  'a gallery delete did not free a retained slot')
+        click(a, '#galleryClose')
+        send_cap('cap5')
+        click(a, '#chipFiles')
+        expect_eq(tile_bases(), ['cap2', 'cap3', 'cap4', 'cap5'],
+                  'a new file was not accepted after a delete freed a slot')
+        click(a, '#galleryClose')
+        send_cap('cap6')
+        click(a, '#chipFiles')
+        expect_eq(tile_bases(), ['cap3', 'cap4', 'cap5', 'cap6'],
+                  'a new start at the cap did not evict the oldest retained file')
+        note = a.js("document.querySelector('#galleryNote').textContent") or ''
+        expect('files retained. Older files were dropped.' in note,
+               'the eviction did not name the dropped file: %r' % (note,))
+        expect(wait_log(a, r'removed to stay within the session budget', 3),
+               'the eviction left no system line')
+        click(a, '#galleryClose')
         expect(not snapshot(a)['errors'], 'page errors on the gallery path: %r' % (snapshot(a)['errors'],))
     finally:
         b.close()
@@ -3041,21 +3101,14 @@ def case_transcode(app, opts):
                        timeout=30, what='transcode draft card')
         expect('Will be re-encoded' in draft, 'the draft card does not project the re-encode: %r' % draft)
         # Record the MediaRecorder that rung B starts, so the engine is proven
-        # even if the short file state line is missed. The Blob slice delay
-        # models a link under the A8 frame budget, so the 14 MB output can be
-        # delivered instead of tripping the app's own >40 frames in 5 s rule.
+        # even if the short file state line is missed. No link model and no
+        # per chunk delay here: the 14 MB output is delivered at full speed,
+        # which proves the A8 budget exempts authenticated bulk chunk frames.
         c.js("""(() => {
           window.__recMimes = [];
           const Orig = window.MediaRecorder;
           window.MediaRecorder = class extends Orig {
             constructor(stream, opts) { super(stream, opts); window.__recMimes.push((opts && opts.mimeType) || ''); }
-          };
-          const origSlice = Blob.prototype.slice;
-          Blob.prototype.slice = function () {
-            const b = origSlice.apply(this, arguments);
-            const ab = b.arrayBuffer.bind(b);
-            b.arrayBuffer = () => new Promise((res, rej) => setTimeout(() => ab().then(res, rej), 150));
-            return b;
           };
           return true;
         })()""")
@@ -3083,7 +3136,16 @@ def case_transcode(app, opts):
             engine = 'recorder-webm' if any('webm' in (m or '') for m in recs) else 'recorder-mp4'
         expect('recorder-webm' in engine or 'recorder-mp4' in engine, 'rung B was not named: %r' % engine)
         v = wait_video(a, 180)
-        expect(v.get('err') is None, 'the rung B video errors: %r' % (v.get('err'),))
+        # wait_video returns as soon as the blob src is attached. Metadata is
+        # still loading at that instant, so poll for HAVE_METADATA or an error.
+        end = time.time() + 90
+        while time.time() < end:
+            v = video_node(a)
+            if v and (v.get('err') is not None or (v.get('ready') or 0) >= 1):
+                break
+            time.sleep(0.2)
+        expect(v and v.get('src'), 'no received video node appeared')
+        expect(v.get('err') is None, 'the rung B video errors: %r' % (v,))
         expect(v.get('ready') >= 1, 'the rung B video never reached HAVE_METADATA')
         expect((v.get('w') or 0) > 0 and (v.get('dur') or 0) > 0,
                'the rung B video has no dimensions or duration: %r' % (v,))

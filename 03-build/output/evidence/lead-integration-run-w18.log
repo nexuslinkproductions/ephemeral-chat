@@ -1,0 +1,93 @@
+lead authority run on d4d48d37, start 10:02:40
+d4d48d3711acc8a32ba1fca97faa02e2690bc2ef6ff3487434aba36c5c618742  ephemeral-chat-v2.html
+=== CASE selftest
+PASS selftest 2 peers, 1 channel, round trip, negative control fired
+PASS selftest
+EXIT selftest 0
+=== CASE envelope
+PASS envelope
+EXIT envelope 0
+=== CASE ratchet
+PASS ratchet
+EXIT ratchet 0
+=== CASE sas
+PASS sas
+EXIT sas 0
+=== CASE file
+PASS file
+EXIT file 0
+=== CASE budget
+PASS budget
+EXIT budget 0
+=== CASE code
+PASS code
+EXIT code 0
+=== CASE lifecycle
+PASS lifecycle
+EXIT lifecycle 0
+=== CASE kill
+PASS kill
+EXIT kill 0
+=== CASE rotate
+PASS rotate
+EXIT rotate 0
+=== CASE migrate
+PASS migrate
+EXIT migrate 0
+=== CASE stun
+PASS stun
+EXIT stun 0
+=== CASE media-order
+PASS media-order
+EXIT media-order 0
+=== CASE exif
+PASS exif
+EXIT exif 0
+=== CASE bitrate
+PASS bitrate
+EXIT bitrate 0
+=== CASE playback
+PASS playback
+EXIT playback 0
+=== CASE imagecap
+PASS imagecap
+EXIT imagecap 0
+=== CASE paste
+PASS paste
+EXIT paste 0
+=== CASE panic
+PASS panic
+EXIT panic 0
+=== CASE react
+PASS react
+EXIT react 0
+=== CASE mid
+PASS mid
+EXIT mid 0
+=== CASE nav
+PASS nav
+EXIT nav 0
+=== CASE gallery
+PASS gallery
+EXIT gallery 0
+=== CASE pair
+PASS pair
+EXIT pair 0
+=== CASE sas-ui
+PASS sas-ui
+EXIT sas-ui 0
+=== CASE a11y
+PASS a11y
+EXIT a11y 0
+=== CASE transcode
+transcode engine A in this harness: function
+PASS transcode
+EXIT transcode 0
+=== CASE mutation-all
+PASS mutation-all
+EXIT mutation-all 0
+=== CASE cover
+PASS cover
+EXIT cover 0
+SUMMARY pass=29 fail=0 of 29
+lead authority run, done 10:10:05

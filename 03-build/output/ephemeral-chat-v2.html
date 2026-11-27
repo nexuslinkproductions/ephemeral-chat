@@ -2076,13 +2076,19 @@ self.onmessage = function (ev) {
     } catch (_) {}
   }
 
-  function countBytes(n) {
+  // A8 frame budget. An authenticated bulk chunk inside an accepted transfer
+  // is integrity gated by the AEAD frame seal, the digest check and the
+  // receiver preallocation cap, so it is not a flood frame and does not spend
+  // the frame budget. Text, control and unknown frames keep the full budget.
+  function countBytes(n, bulk) {
     const now = Date.now();
-    frameTimes.push(now);
-    frameTimes = frameTimes.filter((t) => now - t < 5000);
-    if (frameTimes.length > 40) {
-      endSession('anomaly', 'A8 frame rate');
-      return;
+    if (!bulk) {
+      frameTimes.push(now);
+      frameTimes = frameTimes.filter((t) => now - t < 5000);
+      if (frameTimes.length > 40) {
+        endSession('anomaly', 'A8 frame rate');
+        return;
+      }
     }
     if (!incoming) {
       if (now - byteWindow > 1000) {
@@ -2185,7 +2191,7 @@ self.onmessage = function (ev) {
     const bytes = new Uint8Array(ev.data);
     if (!bytes.length) return;
     bumpInbound();
-    countBytes(bytes.length);
+    countBytes(bytes.length, bytes[0] === 2 && !!incoming);
     if (phase === 'ended') return;
     if (bytes[0] === 2) {
       await onChunk(bytes.subarray(1));
@@ -2257,6 +2263,7 @@ self.onmessage = function (ev) {
       call('fileAbort', { id: msg.id }).catch(() => {});
       return;
     }
+    if (receivedFiles >= MAX_FILES) evict(1);
     if (receivedFiles >= MAX_FILES || receivedBytes + size > MAX_SESSION_BYTES) {
       addSystem('A file was refused (session file budget).');
       call('fileAbort', { id: msg.id }).catch(() => {});
@@ -2322,8 +2329,9 @@ self.onmessage = function (ev) {
     }
   }
 
-  function evict() {
-    while (receivedFiles > MAX_FILES || receivedBytes > MAX_SESSION_BYTES) {
+  function evict(need) {
+    const keep = MAX_FILES - (need || 0);
+    while (receivedFiles > keep || receivedBytes > MAX_SESSION_BYTES) {
       const first = retained.shift();
       if (!first) break;
       if (first.row && first.row.parentNode) first.row.parentNode.removeChild(first.row);
@@ -3657,7 +3665,11 @@ self.onmessage = function (ev) {
       try { URL.revokeObjectURL(item.url); } catch (_) {}
     }
     const j = retained.indexOf(item);
-    if (j >= 0) retained.splice(j, 1);
+    if (j >= 0) {
+      retained.splice(j, 1);
+      receivedFiles--;
+      receivedBytes -= item.size || 0;
+    }
     renderGallery();
     updateChips();
   }
