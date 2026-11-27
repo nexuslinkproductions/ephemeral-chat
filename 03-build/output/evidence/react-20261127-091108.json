@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/.hermes/cache/scratch/react-revert.html",
+  "app_bytes": 165151,
+  "app_sha256": "293217ca3c7f7dfa9c6db174bffc0a8baa0b9d602bc7d85773347548d6c27dbf",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "react",
+    "--app",
+    "/Users/marcelspatz/.hermes/cache/scratch/react-revert.html"
+  ],
+  "case": "react",
+  "detail": "a react frame before SAS confirm left no drop line",
+  "duration_s": 13.24,
+  "exit": 1,
+  "run": "2026-11-27T09:11:08+0100"
+}

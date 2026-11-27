@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/.hermes/cache/scratch/panic-revert.html",
+  "app_bytes": 165155,
+  "app_sha256": "e9a0de1c9691fef3275156985d307e553066e2746e3c909bf9fdd7aad917b937",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "panic",
+    "--app",
+    "/Users/marcelspatz/.hermes/cache/scratch/panic-revert.html"
+  ],
+  "case": "panic",
+  "detail": "one Escape did not close the gallery: got False, want True",
+  "duration_s": 7.63,
+  "exit": 1,
+  "run": "2026-11-27T09:11:00+0100"
+}
