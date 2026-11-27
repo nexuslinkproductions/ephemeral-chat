@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/.hermes/cache/scratch/v1/v1-ascii.html",
+  "app_bytes": 35598,
+  "app_sha256": "4d2e166d770c188990e7fe1a09bb2e69cf4accf4ecb9e4f10c10202e66db6db1",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "file",
+    "--app",
+    "/Users/marcelspatz/.hermes/cache/scratch/v1/v1-ascii.html"
+  ],
+  "case": "file",
+  "detail": "a truncated replay produced a Save anchor: got 3, want 2",
+  "duration_s": 12.57,
+  "exit": 1,
+  "run": "2026-11-27T00:55:17+0100"
+}

@@ -1,0 +1,14 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": 87315,
+  "app_sha256": "795bfec644324b026509b39946ad5ba5bff4fcbb1f6005fbdd7e03fe9280b71e",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "sas"
+  ],
+  "case": "sas",
+  "detail": "a pre-confirm content frame left no counted drop",
+  "duration_s": 11.81,
+  "exit": 1,
+  "run": "2026-11-27T01:01:57+0100"
+}

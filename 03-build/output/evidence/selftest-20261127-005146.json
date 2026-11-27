@@ -1,0 +1,14 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": null,
+  "app_sha256": null,
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "selftest"
+  ],
+  "case": "selftest",
+  "detail": "marker frame arrived on the far side",
+  "duration_s": 11.43,
+  "exit": 1,
+  "run": "2026-11-27T00:51:46+0100"
+}

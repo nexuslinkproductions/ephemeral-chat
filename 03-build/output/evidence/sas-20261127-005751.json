@@ -1,0 +1,14 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": 86975,
+  "app_sha256": "6646e9bc94336eff201267ba6965c2ad6efcf0f63575dbcc7d37736b23041cd2",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "sas"
+  ],
+  "case": "sas",
+  "detail": "wait timed out: reply code (False)",
+  "duration_s": 36.06,
+  "exit": 2,
+  "run": "2026-11-27T00:57:51+0100"
+}

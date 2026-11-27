@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/.hermes/cache/scratch/v1/v1-ascii.html",
+  "app_bytes": 35598,
+  "app_sha256": "4d2e166d770c188990e7fe1a09bb2e69cf4accf4ecb9e4f10c10202e66db6db1",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "migrate",
+    "--app",
+    "/Users/marcelspatz/.hermes/cache/scratch/v1/v1-ascii.html"
+  ],
+  "case": "migrate",
+  "detail": "no migration frame in the artifact",
+  "duration_s": 0.0,
+  "exit": 1,
+  "run": "2026-11-27T00:56:27+0100"
+}

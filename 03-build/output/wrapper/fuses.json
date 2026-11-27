@@ -1,0 +1,22 @@
+{
+  "schema": "ephemeral-fuses/1",
+  "card": "BC-W5",
+  "electron": "45.5.0",
+  "fuses": {
+    "runAsNode": false,
+    "nodeOptions": false,
+    "nodeCliInspect": false,
+    "onlyLoadAppFromAsar": true,
+    "embeddedAsarIntegrityValidation": true,
+    "grantFileProtocolExtraPrivileges": false,
+    "loadBrowserProcessSpecificV8Snapshot": true,
+    "cookieEncryption": false,
+    "wasmTrapHandlers": true
+  },
+  "notes": {
+    "cookieEncryption": "Blueprint 6.6 resolves the conflict in favour of the packaging owner and 11 section 6.1: left disabled in V2. No cookie exists because the session is in memory. Enabling it is a one way transition, so a later round changes it deliberately.",
+    "wasmTrapHandlers": "Untouched, left enabled. Not a security switch: disabling it trades memory safety for speed.",
+    "loadBrowserProcessSpecificV8Snapshot": "On, and the release build must produce the browser process snapshot. If the build does not, the fuse write fails and that is the correct outcome, not a reason to flip it off.",
+    "embeddedAsarIntegrityValidation": "macOS as of Electron 16.0.0, Windows as of Electron 30.0.0. Absent on Linux, residual row 19."
+  }
+}

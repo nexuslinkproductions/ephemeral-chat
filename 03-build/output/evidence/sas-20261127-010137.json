@@ -1,0 +1,14 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": 87713,
+  "app_sha256": "d8d9ff3a4a55a1eeae816f406331b85981c6dd47eaf20f80ea727d88f8f8372f",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "sas"
+  ],
+  "case": "sas",
+  "detail": "no 60 digit SAS found on A, digits panel: '21570\\n79602\\n80272\\n28991\\n06046\\n67902\\n95608\\n76778\\n21658\\n76623\\n51968\\n42995'",
+  "duration_s": 6.42,
+  "exit": 1,
+  "run": "2026-11-27T01:01:37+0100"
+}

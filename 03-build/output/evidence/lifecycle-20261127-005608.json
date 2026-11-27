@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/.hermes/cache/scratch/v1/v1-ascii.html",
+  "app_bytes": 35598,
+  "app_sha256": "4d2e166d770c188990e7fe1a09bb2e69cf4accf4ecb9e4f10c10202e66db6db1",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "lifecycle",
+    "--app",
+    "/Users/marcelspatz/.hermes/cache/scratch/v1/v1-ascii.html"
+  ],
+  "case": "lifecycle",
+  "detail": "pagehide left #offer filled: got 'GZ1.H4sIAAAAAAAAE4WR326bMBhH75F4B7+AqW2wwZ/EBX/SKVNWVU2jaZceOMRqAMt2lrRPP5Gm0nK12+MfnCP7T0niaC4xKnLOqBCFEIRzIjJeMMTQ+gmtnzNEWZ6QhCQ0jnyJ4yiUBJE4UuXg5pOFevfUblafRF/CqCxWx+N8xqO56H6hozc99npUUzAdoJ8/tnE0lsrao+lUMPOEOKdUol37/NC+brYP2+b1GZ31bxc63KuguoOaJn2Mo668NeV5ktOEZjKRV3Gnpt70KmhgRSEKSVKJKDr1FjFKU5nmlFNEJUuoKBKSyJsxvFt0mH1Ag560+2whaNLhPLs33C0nUsp7AZeUZJRxfhNQkec5kzzld1X/GLzbHy/Iqb53dw3Ozi7cdv8NMJ3Gp71TA2zf648vYs89FC978mujh2otNpfdt1CLc//dvfivzWyX33oIznRvR73gvZkG7awzUwB/UJhxgWoKLIdqBY8VZAW0NbQM2grqDLIUKroQyUGIZdMW0KSwEpBly1e8hryA5rpsKdAUqgwqDo8tNA2IBghdtF6HkwXVBav8NW80PVzfz3fB4uU6gBNyJaO64FF7rwaNvfnQwASjWRZHfwE6R4tatQIAAA==', want ''",
+  "duration_s": 8.0,
+  "exit": 1,
+  "run": "2026-11-27T00:56:08+0100"
+}

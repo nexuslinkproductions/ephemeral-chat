@@ -1,0 +1,14 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": null,
+  "app_sha256": null,
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "selftest"
+  ],
+  "case": "selftest",
+  "detail": "TypeError: case_selftest() takes 1 positional argument but 2 were given",
+  "duration_s": 0.0,
+  "exit": 2,
+  "run": "2026-11-27T00:51:10+0100"
+}

@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/.hermes/cache/scratch/v1/v1-ascii.html",
+  "app_bytes": 35598,
+  "app_sha256": "4d2e166d770c188990e7fe1a09bb2e69cf4accf4ecb9e4f10c10202e66db6db1",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "sas",
+    "--app",
+    "/Users/marcelspatz/.hermes/cache/scratch/v1/v1-ascii.html"
+  ],
+  "case": "sas",
+  "detail": "composer is not locked before SAS confirmation",
+  "duration_s": 6.99,
+  "exit": 1,
+  "run": "2026-11-27T00:55:57+0100"
+}

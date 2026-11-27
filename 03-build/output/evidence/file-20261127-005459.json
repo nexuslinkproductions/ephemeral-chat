@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/.hermes/cache/scratch/v1/v1.html",
+  "app_bytes": 35598,
+  "app_sha256": "23be3a0b6f53587e50c97c1767fa745980788288145dc79d3dba42095b150337",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "file",
+    "--app",
+    "/Users/marcelspatz/.hermes/cache/scratch/v1/v1.html"
+  ],
+  "case": "file",
+  "detail": "artifact is not ASCII: 'ascii' codec can't decode byte 0xe2 in position 9792: ordinal not in range(128)",
+  "duration_s": 0.0,
+  "exit": 1,
+  "run": "2026-11-27T00:54:59+0100"
+}

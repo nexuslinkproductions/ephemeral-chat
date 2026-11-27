@@ -1,0 +1,14 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": 87315,
+  "app_sha256": "246c8670dce7731d9475efab4d96b81709e045de1246d1f75255f773734112a4",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "lifecycle"
+  ],
+  "case": "lifecycle",
+  "detail": "content still locked after a confirm attempt, SAS gate not usable by the gate",
+  "duration_s": 36.46,
+  "exit": 2,
+  "run": "2026-11-27T01:00:01+0100"
+}
