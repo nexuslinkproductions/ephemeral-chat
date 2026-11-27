@@ -1,3 +1,56 @@
 stage 05 authority run, start 12:47:55
 2092e0e9e8e3418ba167e22b99623094e0f5d05ea876014874be1e3c4b53b87b  ephemeral-chat-v2.html
 const CORE_SHA256 = '2092e0e9e8e3418ba167e22b99623094e0f5d05ea876014874be1e3c4b53b87b'
+CASE selftest exit 0
+CASE envelope exit 0
+CASE ratchet exit 0
+CASE sas exit 0
+CASE file exit 0
+CASE budget exit 0
+CASE code exit 0
+CASE lifecycle exit 0
+CASE kill exit 0
+CASE rotate exit 0
+CASE migrate exit 0
+CASE stun exit 0
+CASE media-order exit 0
+CASE exif exit 0
+CASE bitrate exit 0
+CASE playback exit 0
+CASE imagecap exit 0
+CASE paste exit 0
+CASE panic exit 0
+CASE react exit 0
+CASE mid exit 0
+CASE nav exit 0
+CASE gallery exit 0
+CASE pair exit 0
+CASE sas-ui exit 0
+CASE a11y exit 0
+CASE transcode exit 0
+CASE mutation-all exit 0
+CASE cover exit 0
+=== wrapper section, absolute paths
+selfcheck exit 0
+unknown argument: /Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/.agent-runs/w26-lane2-release-shape/artifacts/ephemeral.app/Contents/MacOS/ephemeral
+
+RESULT: PASS, app://core served 169810 bytes from the pinned core and the page booted to S0
+authority wrapper section, done 12:55:41
+  EnableNodeCliInspectArguments is Disabled
+  EnableEmbeddedAsarIntegrityValidation is Enabled
+  OnlyLoadAppFromAsar is Enabled
+  LoadBrowserProcessSpecificV8Snapshot is Disabled
+  GrantFileProtocolExtraPrivileges is Disabled
+  WasmTrapHandlers is Enabled
+=== full fuses read on the packaged binary
+Analyzing app: ephemeral
+Fuse Version: v1
+  RunAsNode is Disabled
+  EnableCookieEncryption is Disabled
+  EnableNodeOptionsEnvironmentVariable is Disabled
+  EnableNodeCliInspectArguments is Disabled
+  EnableEmbeddedAsarIntegrityValidation is Enabled
+  OnlyLoadAppFromAsar is Enabled
+  LoadBrowserProcessSpecificV8Snapshot is Disabled
+  GrantFileProtocolExtraPrivileges is Disabled
+  WasmTrapHandlers is Enabled
