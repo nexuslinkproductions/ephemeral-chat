@@ -1,0 +1,74 @@
+lead integration run, start 02:24:54
+6c8c1283047f6ce7d3b926e6fd190d3c46b345926aa0142e02827cf2dc02558d  ephemeral-chat-v2.html
+=== CASE selftest
+PASS selftest 2 peers, 1 channel, round trip, negative control fired
+PASS selftest
+EXIT selftest 0
+=== CASE envelope
+PASS envelope
+EXIT envelope 0
+=== CASE ratchet
+PASS ratchet
+EXIT ratchet 0
+=== CASE sas
+PASS sas
+EXIT sas 0
+=== CASE file
+PASS file
+EXIT file 0
+=== CASE budget
+PASS budget
+EXIT budget 0
+=== CASE code
+PASS code
+EXIT code 0
+=== CASE lifecycle
+PASS lifecycle
+EXIT lifecycle 0
+=== CASE kill
+PASS kill
+EXIT kill 0
+=== CASE rotate
+PASS rotate
+EXIT rotate 0
+=== CASE migrate
+PASS migrate
+EXIT migrate 0
+=== CASE stun
+PASS stun
+EXIT stun 0
+=== CASE cover
+SKIP cover could not run: --relay-host is required, for example turn:127.0.0.1:5349
+EXIT cover 2
+=== CASE media-order
+PASS media-order
+EXIT media-order 0
+=== CASE exif
+PASS exif
+EXIT exif 0
+=== CASE bitrate
+PASS bitrate
+EXIT bitrate 0
+=== CASE playback
+PASS playback
+EXIT playback 0
+=== CASE imagecap
+PASS imagecap
+EXIT imagecap 0
+=== CASE paste
+PASS paste
+EXIT paste 0
+=== CASE mutation-all
+FAIL mutation-all guard kill-nav reverted but kill exited 2 (SKIP kill could not run: devtools websocket closed): kill no longer navigates to about:blank: got 2, want 1
+EXIT mutation-all 1
+SUMMARY pass=18 fail=2 of 20
+lead integration run, done 02:29:07
+
+=== ADDENDUM, lead corrections 07:59:44
+cover SKIP in the loop above was a lead invocation error: the case requires --relay-host per the R2-13 gate command.
+rerun: python3 probes/gate.py cover --relay-host turns:127.0.0.1:5349
+PASS cover, EXIT 0
+mutation-all exit 1 in the loop was a devtools websocket closure inside the kill-nav mutation subrun, one off flake.
+rerun: python3 probes/gate.py mutation-all
+PASS mutation-all, EXIT 0, all seven guards proven binding
+AUTHORITY RESULT: 20 of 20 pass with the documented invocations

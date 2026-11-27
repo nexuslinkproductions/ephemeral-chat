@@ -1,0 +1,14 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/ephemeral-chat-v2.html",
+  "app_bytes": 165202,
+  "app_sha256": "6c8c1283047f6ce7d3b926e6fd190d3c46b345926aa0142e02827cf2dc02558d",
+  "argv": [
+    "probes/gate.py",
+    "mutation-all"
+  ],
+  "case": "mutation-all",
+  "detail": "guard kill-nav reverted but kill exited 2 (SKIP kill could not run: devtools websocket closed): kill no longer navigates to about:blank: got 2, want 1",
+  "duration_s": 66.28,
+  "exit": 1,
+  "run": "2026-11-27T02:28:00+0100"
+}
