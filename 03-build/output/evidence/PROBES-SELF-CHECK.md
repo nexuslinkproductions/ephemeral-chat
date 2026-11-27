@@ -1,125 +1,146 @@
-# PROBES lane self-check, R2a wave 2, tuning and snapshot run
+# PROBES lane self-check, W14 retarget to the final V2 artifact
 
-RUN: w12-ephemeral-fix-r2a-20261127, PROBES2 lane
+RUN: w14-ephemeral-probes-retarget-20261127
 SCOPE: `03-build/output/probes/`, `03-build/output/evidence/`.
-STATUS: partial. Control pins and mutation guard tuning landed. All 14 cases
-were run against one frozen snapshot. Five cards pass on that snapshot,
-eight expose artifact defects, one is blocked by a harness timeout. The
-COREFIX lane edits the live artifact in parallel, so these verdicts describe
-the snapshot only. The lead's post-landing re-run is the authority.
+STATUS: complete. Seven red cases retargeted, six media cases added, mutation-all
+unblocked and green, full 20 case suite green on the final artifact.
 
-## Snapshot
-
-Taken once at lane start, before any other lane could change the file:
+## Artifact under test
 
 ```
-path   03-build/output/probes/snapshots/ephemeral-chat-v2.R2A-PROBES2.html
-sha256 998fedd53fab676f695032c73353407f7d7b18cb4b6f7b52e3710765a68ba191
-bytes  87484
-mtime  2026-11-27T01:05:26
+path   03-build/output/ephemeral-chat-v2.html
+sha256 6c8c1283047f6ce7d3b926e6fd190d3c46b345926aa0142e02827cf2dc02558d
+bytes  165202
 ```
 
-The live `output/ephemeral-chat-v2.html` had the same hash and byte count at
-snapshot time. Every run below passes `--app` pointing at the snapshot.
+Every evidence JSON below records that hash. No snapshot was taken and no app
+file was edited by this lane.
 
-## Tuning rows
+## Command form
 
-| Item | Before | After | Proof |
-|---|---|---|---|
-| rotate control | `click_text(a, r'rotate')` | asserts enabled `#rotate`, then `click(a, '#rotate')` | `rotate` PASS on snapshot, raw log line `rotate rc=0` |
-| migrate control | `click_text(a, r'new session|migrate|new keys')` | asserts enabled `#migrate`, then `click(a, '#migrate')` | reaches migration state poll, raw log line `migrate rc=1 ... last=(0, 0, 0, 0)` |
-| migrate timeout assert | `\b15000\b`, matched `IDLE_CHECK_MS` at line 921 | `migFail\('timeout'\),\s*15000` | first match line 2292, the real migration timer |
-| rotate replay | replayed a string frame; V2 sends binary only, so `no wire frame captured` | shim records `lastRaw` (last binary frame, base64, 128 KiB cap), case replays with `__probe.sendB64` | `rotate rc=0` after the pin, `PASS rotate` |
-| rotate verdict | required the marker count to stay exactly 1; a replayed frame trips integrity wipe and clears the log | accepts 0 or 1, fails only on a second render | `rotate rc=0` with the wipe path |
-| preparse-cap guard | `65536`, `64 * 1024`, `65_536` | unchanged, now verified against V2: first match line 696 `if (text.length > 65536)`, other matches CHUNK and PAYLOAD_MAX | preflight output below |
-| sas-gate guard | `!\s*(?:sasOk|sasConfirmed|sasVerified|verified)\b`, no match in V2 | renamed `sas-lock`, pattern pins the three disabled flags before `showSas()` at line 1479 | preflight `sas-lock matches=1 first_line=1479` |
-| completeness guard | `\breceived\s*===\s*size\b`, no match in V2 | `f\.received\s*!==\s*f\.size`, line 760 | preflight `completeness matches=1 first_line=760` |
-| mutation preflight | baseline cases ran before any pattern was checked | every guard pattern is checked first and all misses are named in one failure | code path in `case_mutation` |
-
-Guard preflight against the snapshot:
+Run from `04_PROJECTS/EPHEMERAL`:
 
 ```
-code-cap      matches=1 first_line=915 case=code
-preparse-cap  matches=3 first_line=696 case=code
-ttl           matches=1 first_line=919 case=code
-row-cap       matches=1 first_line=912 case=budget
-kill-nav      matches=1 first_line=1353 case=kill
-sas-lock      matches=1 first_line=1479 case=sas
-completeness  matches=1 first_line=760 case=file
+python3 03-build/output/probes/gate.py <case> --app 03-build/output/ephemeral-chat-v2.html
 ```
 
-`preparse-cap` matches three sites by design (the `64 * 1024` forms are
-`CHUNK` and `PAYLOAD_MAX`); mutation replaces the first match, which is the
-`65536` pre-parse gate on the decrypted text.
-
-## Case results on the snapshot
-
-Command form, run from `04_PROJECTS/EPHEMERAL`:
+Exit 0 PASS, 1 FAIL, 2 the case could not run. Cover takes the relay flag:
 
 ```
-python3 03-build/output/probes/gate.py <case> --app 03-build/output/probes/snapshots/ephemeral-chat-v2.R2A-PROBES2.html
+python3 03-build/output/probes/gate.py cover --app 03-build/output/ephemeral-chat-v2.html --relay-host turn:127.0.0.1:5349
 ```
 
-| Card | Case | Exit | Raw last line | Evidence JSON |
+## Part 1, the seven retargeted cases
+
+Each retarget keeps the card's failure-mode invariant and records the card row.
+A case that cannot reach its invariant exits 2; none of the seven does.
+
+| Card | Case | Retarget, and the invariant it still proves | Raw last line | Evidence |
 |---|---|---|---|---|
-| R2-01 | selftest | 0 | `PASS selftest 2 peers, 1 channel, round trip, negative control fired` | `selftest-20261127-011715.json` |
-| R2-02 | envelope | 1 | `FAIL envelope unknown k left no visible system line` | `envelope-20261127-011254.json` |
-| R2-03 | ratchet | 1 | `FAIL ratchet artifact calls exportKey, key bytes are readable from the main thread` | `ratchet-20261127-011308.json` |
-| R2-04 | sas | 0 | `PASS sas` | `sas-20261127-011338.json` |
-| R2-05 | file | 1 | `FAIL file file-start and file-end were not captured` | `file-20261127-011308.json` |
-| R2-06 | budget | 1 | `FAIL budget a 200 frame burst did not trip the A8 rate rule` | `budget-20261127-011316.json` |
-| R2-07 | code | 0 | `PASS code` | `code-20261127-011120.json` |
-| R2-08 | lifecycle | 1 | `FAIL lifecycle pagehide left #input filled: got 'PROBE-DRAFT', want ''` | `lifecycle-20261127-011347.json` |
-| R2-09 | kill | 2 | `SKIP kill harness error: timeout: timed out` | `kill-20261127-011355.json` |
-| R2-10 | rotate | 0 | `PASS rotate` | `rotate-20261127-011739.json` |
-| R2-11 | migrate | 1 | `FAIL migrate migration did not open a new channel on both peers, last=(0, 0, 0, 0)` | `migrate-20261127-011750.json` |
-| R2-12 | stun | 0 | `PASS stun` | `stun-20261127-011134.json` |
-| R2-13 | cover | 0 | `PASS cover` with `--relay-host turn:127.0.0.1:5349` | `cover-20261127-011144.json` |
-| R2-15 | mutation-all | 2 | `SKIP mutation-all could not run: case kill cannot run on the artifact, mutation has no baseline: SKIP kill harness error: timeout: timed out` | `mutation-all-20261127-011505.json` |
+| R2-02 | envelope | The unknown `k` frame is produced by the app's own compress-then-encrypt path: a one shot shim transform rewrites the envelope plaintext before the worker seals it. The receiver decrypts a valid frame with an unknown `k`. Proves: visible line naming the value, no crash, no silent return, unknown `v` visible with no content render, malformed JSON counted, three unknown frames in 10 s runs Kill. Plaintext injection is no longer used because V2 rejects it before the router. | `PASS envelope` | `envelope-20261127-021702.json` |
+| R2-03 | ratchet | `exportKey` is allowed on public keys only. The case scans every `exportKey` call (must carry `.publicKey`, never `privateKey`), asserts key generation is inside the Worker, scans every worker-to-main and main-to-worker `postMessage` argument for `rk`, `ckS`, `ckR`, `.priv`, `mkBytes`, `file.key`, `privateKey`, and asserts chain key state is not declared in the main thread. Behaviorally: two identical sends produce different sealed binary frames, no plaintext marker appears in any frame, five more sends are five distinct frames. | `PASS ratchet` | `ratchet-20261127-021712.json` |
+| R2-05 | file | The first transfer proves the binary wire shape: start (type 1), chunk (type 2), end (type 1). Completeness is tested by riding the app's sealed send path with the declared size raised 64 KiB and one extra chunk: the sender streams the real bytes, the receiver reaches `f.received !== f.size`, and no Save anchor or blob exists. Digest is tested by sealing a complete transfer with a wrong digest: no anchor, no blob. A literal replay of the captured binary frames with the file-end tail dropped is the last step and must also produce no anchor and no blob. | `PASS file` | `file-20261127-021732.json` |
+| R2-06 | budget | A bad file-start is now a valid sealed frame with `size = -1`, so it reaches the real refusal branch and the next valid transfer must still complete (F-04). A8 is tested with 45 frames the app seals itself in one burst, not plaintext noise, so every frame reaches the counter; the receiver must end and the ended text must name `A8` or `frame rate`. Static pins `MAX_ROWS = 2000`, the trim loop, `frameTimes.length > 40`, and the 2 MiB byte rule. | `PASS budget` | `budget-20261127-021749.json` |
+| R2-08 | lifecycle | A received image URL is created first, then the draft and a synthetic URL. `pagehide` must clear all five text fields, the file input, the transcript, the gallery and about panels; every app blob URL except the Worker script URL and the case's synthetic URL must be revoked, the received media URL must be in the revoked set, the last revoke must see zero live DOM nodes, and no channel may stay open. `?idle=5` is still refused. | `PASS lifecycle` | `lifecycle-20261127-021813.json` |
+| R2-09 | kill | The harness installs a CDP `Page.javascriptDialogOpening` handler that accepts the native confirm out of band, so `#wipe` no longer blocks the renderer. A copied invite code is required for the clipboard branch; the shim records `Clipboard.prototype.writeText` calls instead of touching the OS clipboard. Proves: wipe enabled before connect, double Escape kills, DOM cleared before revoke, an empty clipboard write on the kill path, and an exact `about:blank` navigation. | `PASS kill` | `kill-20261127-021830.json` |
+| R2-11 | migrate | After the channel count check the case reads the new 60 digit SAS on both peers, asserts it differs from the pre-migration SAS (fresh keyset) and matches across peers, asserts content is locked again, confirms the new SAS on both sides, then asserts content flows on the migrated channel. A second migration with a shim-tampered `fp` in the sealed M1 offer must not commit and must report a migration failure. | `PASS migrate` | `migrate-20261127-021901.json` |
 
-Raw transcript of the whole run: `evidence/probes2-raw-snapshot.log`.
+## Part 2, the six media cases
 
-## What the red cases mean
+| Card | Case | Invariant proven | Raw last line | Evidence |
+|---|---|---|---|---|
+| R2-16 | media-order | `framePlain` compresses then pads to a 4096 byte bucket, `sealControl` frames before the AEAD call and binds `plain.length + 16` in the AAD, `openControl` asserts the length and zero padding, and `sendChunk` has no gzip pass. Behaviorally: every sealed control frame is a 4096 multiple and the media chunk frame is exactly the encoded bytes plus the GCM tag. Alias `media` maps to the same case. | `PASS media-order` | `media-order-20261127-022130.json` |
+| R2-17 | exif | A real PNG carrying `tEXt` and `eXIf` markers is sent through the picker. The received blob must be WebP or JPEG, carry none of `Exif`, `GPS`, `XMP`, `iCCP`, `eXIf`, `Comment`, and the displayed name must match the encoded extension. Static: `encodeImage` has one call site inside `acceptFile`, and the picker, drop and paste all route through `acceptFile`. | `PASS exif` | `exif-20261127-022139.json` |
+| R2-19 | bitrate | `VIDEO_CAP = 47185920`, the budget is `floor(VIDEO_CAP * 0.90)`, the retry is `bitrate * (VIDEO_CAP / size) * 0.95`, and the refusal names the reached size. `planBitrate` is extracted and executed with the artifact's own cap: projected budget, ten second bitrate, 1080/720/480 ladders, 600 s ceiling, zero duration. Engine A structural: `decoderConfig` asserted before `muxer.finalize()`, `frame.close()` present, `encodeQueueSize > 8` cap, rung B fallback. | `PASS bitrate` | `bitrate-20261127-022146.json` |
+| R2-20 | playback | CSP carries `media-src blob:`. A 0.7 s video is generated in the page with MediaRecorder and dropped through the real drop handler, so this is live rung B. The received video must have no error, `readyState >= 1`, non-zero width and duration. Wipe must revoke the video URL after its node is gone and navigate to about:blank. | `PASS playback` | `playback-20261127-022147.json` |
+| R2-21 | imagecap | `IMAGE_MAX_PX = 60000000`, the pixel gate precedes the destination canvas allocation, and `bitmap.close()` is in a `finally`. A fake `createImageBitmap` reports 20000 x 10000 px, so the gate refuses without allocating the image; the fake bitmap must be closed exactly once and no wire frame may leave. A real 2000 x 10 PNG must arrive with its long edge capped at 1600. | `PASS imagecap` | `imagecap-20261127-022200.json` |
+| R2-22 | paste | `acceptFile` is the only entry point: `queueFiles` and `sendFile` both call it, and the picker, drop and paste callers route through those. A text-only paste is not prevented. Two unnamed pasted images arrive as `paste-1` and `paste-2`, so the name is counter based, not a timestamp. The single transcode guard is present. | `PASS paste` | `paste-20261127-022208.json` |
 
-- `envelope`: an unknown `k` frame leaves no visible system line on the peer.
-  The card requires a visible rejection.
-- `ratchet`: the artifact calls `exportKey`, so key material is readable from
-  the main thread. Static failure, no browser needed.
-- `file`: the harness cannot slice per-transfer frames because V2 sends binary
-  only and the shim keeps string frames separately. This is a probe defect, not
-  an artifact verdict; see gaps.
-- `budget`: 200 noise frames in a burst do not end the session, so the A8 rate
-  rule is not landing.
-- `lifecycle`: `pagehide` leaves the draft in `#input`; the card requires the
-  field cleared.
-- `kill`: CDP wait timed out inside the case (70 s). The first half (double
-  Escape) may pass; the second half times out around the wipe and blob revoke
-  check. Needs a harness look next wave.
-- `migrate`: both pages end with zero channels and the shim reset, consistent
-  with `migration-failed` wiping to `about:blank`. The pinned `#migrate` control
-  is found and clicked; the artifact does not reach a new channel.
-- `mutation-all`: the guard table is complete and its preflight passes, but the
-  case needs a baseline from every guarded case first. `kill` exits 2, so the
-  run stops by design rather than reporting a false pass.
+R2-18 transcode has no seventh case by design. Its failure mode is covered
+structurally in `bitrate` (decoderConfig before finalize, frame close, queue cap)
+and behaviorally through rung B in `playback`. Engine A cannot execute here:
+`VideoEncoder` is undefined under the harness's headless `--disable-gpu`
+Chromium, so engine A is static-only in this environment. Headed engine A
+execution is named R4 work, along with a real >45 MiB clip for the retry path.
 
-## Known gaps for the next wave
+## Part 3, full suite on the final artifact
 
-- `case_file` and `case_ratchet` still slice `sentFrames` by string type. V2
-  sends binary frames only, so both need the same `raw` boundary treatment
-  `rotate` now uses. `file` fails before its real assertions because of this.
-- `kill` timeout at 70 s needs isolation: run the first half and the blob
-  revoke half separately to find the wait that never settles.
-- `mutation-all` cannot be judged until `kill` runs and the artifact stops
-  wiping on migration; both are artifact side for now.
-- `code` passes on the snapshot, so the 16 KB paste cap, 64 KB pre-parse cap,
-  120 s TTL and 32 candidate cap are all present and behave.
+All 20 cases, one run each, artifact hash `6c8c1283...`, 165202 bytes.
+
+| # | Card | Case | Exit | Raw last line | Evidence |
+|---|---|---|---|---|---|
+| 1 | R2-01 | selftest | 0 | `PASS selftest 2 peers, 1 channel, round trip, negative control fired` | `selftest-20261127-021658.json` |
+| 2 | R2-02 | envelope | 0 | `PASS envelope` | `envelope-20261127-021702.json` |
+| 3 | R2-03 | ratchet | 0 | `PASS ratchet` | `ratchet-20261127-021712.json` |
+| 4 | R2-04 | sas | 0 | `PASS sas` | `sas-20261127-021723.json` |
+| 5 | R2-05 | file | 0 | `PASS file` | `file-20261127-021732.json` |
+| 6 | R2-06 | budget | 0 | `PASS budget` | `budget-20261127-021749.json` |
+| 7 | R2-07 | code | 0 | `PASS code` | `code-20261127-021758.json` |
+| 8 | R2-08 | lifecycle | 0 | `PASS lifecycle` | `lifecycle-20261127-021813.json` |
+| 9 | R2-09 | kill | 0 | `PASS kill` | `kill-20261127-021830.json` |
+| 10 | R2-10 | rotate | 0 | `PASS rotate` | `rotate-20261127-021849.json` |
+| 11 | R2-11 | migrate | 0 | `PASS migrate` | `migrate-20261127-021901.json` |
+| 12 | R2-12 | stun | 0 | `PASS stun` | `stun-20261127-021920.json` |
+| 13 | R2-13 | cover | 0 | `PASS cover` | `cover-20261127-021926.json` |
+| 14 | R2-15 | mutation-all | 0 | `PASS mutation-all` | `mutation-all-20261127-021932.json` |
+| 15 | R2-16 | media-order | 0 | `PASS media-order` | `media-order-20261127-022130.json` |
+| 16 | R2-17 | exif | 0 | `PASS exif` | `exif-20261127-022139.json` |
+| 17 | R2-19 | bitrate | 0 | `PASS bitrate` | `bitrate-20261127-022146.json` |
+| 18 | R2-20 | playback | 0 | `PASS playback` | `playback-20261127-022147.json` |
+| 19 | R2-21 | imagecap | 0 | `PASS imagecap` | `imagecap-20261127-022200.json` |
+| 20 | R2-22 | paste | 0 | `PASS paste` | `paste-20261127-022208.json` |
+
+The six previously green cases stayed green: selftest, sas, code, rotate, stun,
+cover, all exit 0 on the final artifact.
+
+## Mutation sweep
+
+`mutation-all` baselines every guarded case and then reverts each guard on a
+scratch copy. Each revert must make its matching case exit 1 with a reason
+different from the unmutated baseline. Seven guards:
+
+```
+code-cap      CODE_MAX = 16 * 1024 -> 1000000000        case code
+preparse-cap  text.length > 65536 -> 1000000000         case code
+ttl           TTL_MS = 120000 -> 1000000000             case code
+row-cap       MAX_ROWS = 2000 -> 20                     case budget
+kill-nav      about:blank -> about:log                  case kill
+sas-lock      three disabled flags -> enabled           case sas
+completeness  f.received !== f.size -> false            case file
+```
+
+Guard patterns are pinned to the constant or expression they guard, not to a
+bare number, so a revert cannot land on an unrelated site. `kill-nav` is
+detected by an exact `about:blank` href check, because Chrome reports
+`about:blank#blocked` for an invalid `about:` target and a prefix check would
+have passed it.
+
+```
+python3 03-build/output/probes/gate.py mutation-all --app 03-build/output/ephemeral-chat-v2.html
+PASS mutation-all
+rc=0
+```
+
+## Environment limits recorded, not hidden
+
+- `VideoEncoder` is undefined in the harness Chromium (`--disable-gpu`). Engine
+  A is asserted structurally. Rung B runs live in `playback`. Headed engine A
+  execution and a real retry-path clip are R4 work.
+- Ciphertext replay of an old control frame fails AEAD and ends the session, so
+  it cannot reach the completeness branch. The completeness and digest branches
+  are reached by mutating one plaintext field on the app's own sealed send path.
+  The literal replay is still run last and must leave no Save anchor.
+- The 200 MP image gate is exercised with a fake `createImageBitmap`, so no
+  multi-hundred-megabyte allocation is needed; the close counter proves the
+  `finally`.
+- Video playback uses the live MediaRecorder rung, 0.7 s, in-page generated.
 
 ## Byte scan
 
 ```
-probes/gate.py                   bytes=56300 non_ascii=0 en=0 em=0
-evidence/probes2-raw-snapshot.log bytes=1249 non_ascii=0 en=0 em=0
+probes/gate.py                     bytes=90531 non_ascii=0 en=0 em=0
+evidence/PROBES-SELF-CHECK.md      bytes=12449 non_ascii=0 en=0 em=0
 ```
 
-Command: a Python scan counting bytes above 127 and the UTF-8 sequences
-`e2 80 93` and `e2 80 94` in every file this lane wrote.
+The scan counts bytes above 127 and the UTF-8 sequences `e2 80 93` and
+`e2 80 94` in both files.
