@@ -93,8 +93,48 @@ unshippable.
 
 Measured 2026-11-27 with `@electron/fuses` 2.1.3 read on the stock Electron 45.5.0 framework:
 RunAsNode Enabled, EnableNodeOptionsEnvironmentVariable Enabled, EnableNodeCliInspectArguments
-Enabled. The same gate command refused it. No fused release binary exists in this round, so the
-passing side of the read is the named limit.
+Enabled. The same gate command refused it. On the packaged app at
+`.agent-runs/w26-lane2-release-shape/artifacts/ephemeral.app` the same read returns all three
+Disabled and the gate passes, so both sides of the read are now measured.
+
+## Release order, package, fuse, codesign
+
+The order is load bearing. A fuse write rewrites
+`Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework`, which leaves
+that nested code signature stale, and macOS then kills the binary at launch with `Killed: 9`.
+Re-sign after the write, every time.
+
+```
+1. package  npx @electron/packager <src> <name> --asar --asar-integrity-digest ... --no-osx-sign
+2. fuse     sh scripts/fuses.sh write --app <packaged app>
+3. codesign codesign --force --deep --sign <identity> "<packaged app>"
+```
+
+`scripts/fuses.sh write` now emits the `@electron/fuses` 2.1.3 enum names, not the lowerCamel
+keys of `fuses.json` (REL-L1):
+
+```
+RunAsNode=off EnableNodeOptionsEnvironmentVariable=off EnableNodeCliInspectArguments=off
+OnlyLoadAppFromAsar=on EnableEmbeddedAsarIntegrityValidation=on
+GrantFileProtocolExtraPrivileges=off LoadBrowserProcessSpecificV8Snapshot=on
+EnableCookieEncryption=off WasmTrapHandlers=on
+```
+
+A key in `fuses.json` with no mapping makes the script exit 1 with `unmapped fuse name(s): ...`
+instead of handing the tool a name it rejects. Read the result back in the same run:
+`sh scripts/fuses.sh read --app <app>`, and require the three node entry point fuses Disabled.
+
+`codesign --verify` on the bundle still reports `valid on disk` after a fuse write, because it
+does not re-check nested code without `--deep`. Use `codesign --verify --deep --strict`, or
+verify `Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework`
+directly, or the release evidence will pass a stale signature.
+
+REL-L2 stays carried: `fuses.json` sets `loadBrowserProcessSpecificV8Snapshot: true`, and a
+full write from that table turns the fuse on. The stock 45.5.0 framework ships no
+`browser_v8_context_snapshot.bin`, so that packaged app aborts at launch with
+`FATAL:gin/v8_initializer.cc:664 Error loading V8 startup snapshot file`. Set the row false
+until a framework build produces the browser snapshot. Do not enable the fuse to work around a
+missing file.
 
 `EPHEMERAL_ALLOW_UNVERIFIED=1` is a development hatch, ignored when `app.isPackaged`. With it,
 a start without a valid hash is allowed only unpackaged, and About says

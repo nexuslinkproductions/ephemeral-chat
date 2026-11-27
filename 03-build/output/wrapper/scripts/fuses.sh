@@ -32,15 +32,33 @@ usage() {
 [ -n "$mode" ] || usage
 [ -f "$config" ] || { echo "missing config: $config" >&2; exit 2; }
 
+# fuses.json uses lowerCamel keys for readability. @electron/fuses 2.1.3 accepts only the
+# enum names below, and an unmapped name is a hard error there, so map every row and refuse
+# an unknown key here instead of shipping a write that cannot flip anything (REL-L1).
 flags=$(python3 - "$config" <<'PY'
 import json
 import sys
 
+NAMES = {
+    "runAsNode": "RunAsNode",
+    "nodeOptions": "EnableNodeOptionsEnvironmentVariable",
+    "nodeCliInspect": "EnableNodeCliInspectArguments",
+    "onlyLoadAppFromAsar": "OnlyLoadAppFromAsar",
+    "embeddedAsarIntegrityValidation": "EnableEmbeddedAsarIntegrityValidation",
+    "grantFileProtocolExtraPrivileges": "GrantFileProtocolExtraPrivileges",
+    "loadBrowserProcessSpecificV8Snapshot": "LoadBrowserProcessSpecificV8Snapshot",
+    "cookieEncryption": "EnableCookieEncryption",
+    "wasmTrapHandlers": "WasmTrapHandlers",
+}
+
 with open(sys.argv[1], "r", encoding="ascii") as handle:
     data = json.load(handle)
+unknown = [key for key in data["fuses"] if key not in NAMES]
+if unknown:
+    raise SystemExit("unmapped fuse name(s): %s" % ", ".join(unknown))
 pairs = []
 for name, value in data["fuses"].items():
-    pairs.append("%s=%s" % (name, "on" if value else "off"))
+    pairs.append("%s=%s" % (NAMES[name], "on" if value else "off"))
 print(" ".join(pairs))
 PY
 )
