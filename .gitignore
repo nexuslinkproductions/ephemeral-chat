@@ -1,2 +1,3 @@
 .agent-runs/
 03-build/output/monitor/.build/
+04-pentest/evidence/pentest-environment/fixtures/*.mp4
