@@ -1,0 +1,17 @@
+# snapshot run start 2026-11-27T01:11:20 app=03-build/output/probes/snapshots/ephemeral-chat-v2.R2A-PROBES2.html
+code rc=0 14.7s PASS code
+stun rc=0 5.9s PASS stun
+cover rc=0 5.9s PASS cover
+rotate rc=1 7.0s FAIL rotate no wire frame captured to replay
+migrate rc=1 39.8s FAIL migrate migration did not open a new channel on both peers, last=(0, 0, 0, 0)
+envelope rc=1 13.6s FAIL envelope unknown k left no visible system line
+ratchet rc=1 0.1s FAIL ratchet artifact calls exportKey, key bytes are readable from the main thread
+file rc=1 8.1s FAIL file file-start and file-end were not captured
+budget rc=1 16.5s FAIL budget a 200 frame burst did not trip the A8 rate rule
+sas rc=0 9.0s PASS sas
+lifecycle rc=1 8.1s FAIL lifecycle pagehide left #input filled: got 'PROBE-DRAFT', want ''
+kill rc=2 70.2s SKIP kill harness error: timeout: timed out
+mutation-all rc=2 102.6s SKIP mutation-all could not run: case kill cannot run on the artifact, mutation has no baseline: SKIP kill harness error: timeout: timed out
+rotate rc=1 11.7s FAIL rotate the pre-rotate frame was accepted again, old epoch is live: got 0, want 1
+rotate rc=0 11.9s PASS rotate
+migrate rc=1 39.5s FAIL migrate migration did not open a new channel on both peers, last=(0, 0, 0, 0)

@@ -494,13 +494,6 @@ function b64u(bytes) {
   for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-function ub64u(text) {
-  const s = String(text).replace(/-/g, '+').replace(/_/g, '/');
-  const bin = atob(s + '==='.slice((s.length + 3) % 4));
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
 function cat() {
   let n = 0;
   for (let i = 0; i < arguments.length; i++) n += arguments[i].length;
@@ -1009,7 +1002,7 @@ self.onmessage = function (ev) {
   const consumedSids = new Set();
   const retired = new Set();
 
-  const workerSrc = document.getElementById('cryptoWorker').textContent;
+  const workerSrc = "'use strict';\n" + ub64u.toString() + ';\n' + document.getElementById('cryptoWorker').textContent;
   const workerUrl = URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' }));
   const worker = new Worker(workerUrl);
   const waiters = new Map();
@@ -1132,6 +1125,9 @@ self.onmessage = function (ev) {
     return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
+  // The one base64url decoder. This definition is also injected into the worker
+  // blob below, so the URL safe alphabet and the padding live in exactly one
+  // place. Keep it a plain function declaration for toString().
   function ub64u(text) {
     const s = String(text).replace(/-/g, '+').replace(/_/g, '/');
     const bin = atob(s + '==='.slice((s.length + 3) % 4));
@@ -1409,8 +1405,10 @@ self.onmessage = function (ev) {
 
   function newPeer(opts) {
     const peer = new RTCPeerConnection({ iceServers: ICE });
+    // A pending migration peer is not the live peer: its own channel creation and
+    // its startup connection states must not end or alarm the live session.
     peer.addEventListener('connectionstatechange', () => {
-      if (phase === 'ended') return;
+      if (peer !== pc || phase === 'ended') return;
       const state = peer.connectionState;
       if (state === 'disconnected' && connected) {
         clearTimeout(disconnectTimer);
@@ -1436,7 +1434,7 @@ self.onmessage = function (ev) {
       else anomaly('A2 second channel', true);
     });
     peer.addEventListener('negotiationneeded', () => {
-      if (phase === 'live' || phase === 'migrating') anomaly('A3 renegotiation', true);
+      if (peer === pc && (phase === 'live' || phase === 'migrating')) anomaly('A3 renegotiation', true);
     });
     return peer;
   }
@@ -1539,7 +1537,7 @@ self.onmessage = function (ev) {
   async function sendControl(obj, file) {
     if (phase === 'ended') throw new Error('Session ended');
     if (!dc || dc.readyState !== 'open') throw new Error('Not connected');
-    const env = Object.assign({ v: 1, k: obj.k, sid: sessionSid, seq: seqOut++ }, obj);
+    const env = Object.assign({}, obj, { v: 1, k: obj.k, sid: sessionSid, seq: seqOut++ });
     const ct = await call('control', { json: JSON.stringify(env), file: file || null }, 12000);
     const out = new Uint8Array(ct.length + 1);
     out[0] = 1;
@@ -2226,7 +2224,7 @@ self.onmessage = function (ev) {
       m.mineVerified = true;
       if (m.peerVerified && !m.doneSent) {
         m.doneSent = true;
-        sendControl({ k: 'mig', step: 'done', sid: m.sid }).catch(() => migFail('closed'));
+        sendControl({ k: 'mig', step: 'done', nsid: m.sid }).catch(() => migFail('closed'));
       }
     });
     channel.addEventListener('message', (ev) => {
@@ -2250,7 +2248,7 @@ self.onmessage = function (ev) {
     m.peerVerified = true;
     if (m.mineVerified && m.peerVerified && !m.doneSent) {
       m.doneSent = true;
-      sendControl({ k: 'mig', step: 'done', sid: m.sid }).catch(() => migFail('closed'));
+      sendControl({ k: 'mig', step: 'done', nsid: m.sid }).catch(() => migFail('closed'));
     }
   }
 
@@ -2288,7 +2286,7 @@ self.onmessage = function (ev) {
       const m = { sid: sidNew, fp: fp, peerFp: '', role: 'offer', pc: pcNew, dc: null, code: code, selfSdp: sdp, peerSdp: '', keys: keys, peerKeys: null, mineVerified: false, peerVerified: false, doneSent: false };
       mig = m;
       bindPending(dcNew, m);
-      await sendControl({ k: 'mig', step: 'offer', sid: sidNew, fp: fp, code: code });
+      await sendControl({ k: 'mig', step: 'offer', nsid: sidNew, fp: fp, code: code });
       migTimer = setTimeout(() => migFail('timeout'), 15000);
       addSystem('Migration started. Waiting for the other side.');
     } catch (e) {
@@ -2315,7 +2313,8 @@ self.onmessage = function (ev) {
     setStatus('migrating', 'wait');
     try {
       const env = await unpackCode(String(msg.code || ''));
-      if (env.sid !== msg.sid) throw new Error('session id mismatch');
+      const nsid = String(msg.nsid || '');
+      if (env.sid !== nsid) throw new Error('session id mismatch');
       const keys = await call('migKeys');
       if (keys.suite !== env.suite) throw new Error('suite mismatch');
       const pcNew = newPeer({ onChannel: (ch) => { if (mig) bindPending(ch, mig); } });
@@ -2326,14 +2325,14 @@ self.onmessage = function (ev) {
       const sdp = pcNew.localDescription.sdp;
       assertCandidates(sdp);
       const fp = await sha256Hex(new TextEncoder().encode(fpOf(sdp)));
-      const check = (await sha256Hex(new TextEncoder().encode(String(msg.sid) + String(msg.fp) + fp))).slice(0, 6);
+      const check = (await sha256Hex(new TextEncoder().encode(nsid + String(msg.fp) + fp))).slice(0, 6);
       const code = await packEnvelope({
-        v: 1, sid: msg.sid, ts: Date.now(), sdp: sdp,
+        v: 1, sid: nsid, ts: Date.now(), sdp: sdp,
         eph_pk: keys.eph, stat_pk: keys.stat, suite: keys.suite, stun: ICE[0].urls
       });
-      const m = { sid: msg.sid, fp: fp, peerFp: String(msg.fp), role: 'answer', pc: pcNew, dc: null, code: code, selfSdp: sdp, peerSdp: env.sdp, keys: keys, peerKeys: { eph: env.eph_pk, stat: env.stat_pk }, mineVerified: false, peerVerified: false, doneSent: false };
+      const m = { sid: nsid, fp: fp, peerFp: String(msg.fp), role: 'answer', pc: pcNew, dc: null, code: code, selfSdp: sdp, peerSdp: env.sdp, keys: keys, peerKeys: { eph: env.eph_pk, stat: env.stat_pk }, mineVerified: false, peerVerified: false, doneSent: false };
       mig = m;
-      await sendControl({ k: 'mig', step: 'answer', sid: m.sid, fp: fp, code: code, check: check });
+      await sendControl({ k: 'mig', step: 'answer', nsid: m.sid, fp: fp, code: code, check: check });
       migTimer = setTimeout(() => migFail('timeout'), 15000);
       addSystem('Peer started a migration. Answer sent.');
     } catch (e) {
@@ -2343,7 +2342,7 @@ self.onmessage = function (ev) {
 
   async function migAnswer(msg) {
     const m = mig;
-    if (!m || m.role !== 'offer' || String(msg.sid) !== m.sid) return;
+    if (!m || m.role !== 'offer' || String(msg.nsid) !== m.sid) return;
     try {
       const check = (await sha256Hex(new TextEncoder().encode(m.sid + m.fp + String(msg.fp)))).slice(0, 6);
       if (String(msg.check) !== check) throw new Error('migration check mismatch');
@@ -2361,7 +2360,7 @@ self.onmessage = function (ev) {
 
   async function migDone(msg) {
     const m = mig;
-    if (!m || String(msg.sid) !== m.sid) return;
+    if (!m || String(msg.nsid) !== m.sid) return;
     if (!m.mineVerified || !m.peerVerified) {
       migFail('commit missing');
       return;
@@ -2376,7 +2375,7 @@ self.onmessage = function (ev) {
     const oldDc = dc;
     try {
       const der = await call('migAdopt', {
-        role: m.role,
+        role: m.role === 'offer' ? 'offer' : 'join',
         sid: m.sid,
         suite: m.keys.suite,
         ephPeer: ub64u(m.peerKeys.eph),
@@ -2592,6 +2591,7 @@ self.onmessage = function (ev) {
     el.offerIn.value = '';
     el.answerIn.value = '';
     el.file.value = '';
+    el.input.value = '';
     urls.splice(0).forEach((url) => {
       try { URL.revokeObjectURL(url); } catch (_) {}
     });

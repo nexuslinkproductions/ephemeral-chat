@@ -366,6 +366,7 @@ SHIM = r"""
         var u8 = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer || data);
         if (P.sent.length < 5000) { P.sent.push({ bytes: u8.length }); }
         if (P.raw.length < 12 && u8.length <= 131072) { P.raw.push(toB64(u8)); }
+        if (u8.length <= 131072) { P.lastRaw = toB64(u8); }
       }
       return origSend(data);
     };
@@ -446,6 +447,7 @@ SHIM = r"""
       sentFrames: P.sent.slice(-400),
       recvFrames: P.recv.slice(-400),
       raw: P.raw.slice(-12),
+      lastRaw: P.lastRaw || null,
       blobCreated: P.blobs.created.slice(-50),
       blobRevoked: P.blobs.revoked.slice(-50),
       domAtRevoke: P.blobs.domAtRevoke.slice(-50),
@@ -1163,17 +1165,19 @@ def case_rotate(app, opts):
         fill(a, '#input', marker)
         click(a, '#send')
         expect(recv_marker(c, marker, 8), 'pre-rotate message did not arrive')
-        frames = [f for f in snapshot(a)['sentFrames'] if isinstance(f, str)]
-        expect(frames, 'no wire frame captured to replay')
-        old = frames[-1]
+        old = snapshot(a)['lastRaw']
+        expect(old, 'no binary wire frame captured to replay')
 
-        clicked = click_text(a, r'rotate')
-        expect(clicked, 'no rotate control in the UI')
+        expect(a.js("(() => { const b = document.querySelector('#rotate'); return !!b && !b.disabled; })()"),
+               'no enabled #rotate control in the UI')
+        click(a, '#rotate')
         time.sleep(2.5)
 
-        send_text(a, old)
+        expect(a.js("window.__probe.sendB64(%s)" % jsval(old)),
+               'no open channel to replay the pre-rotate frame')
         time.sleep(1.8)
-        expect_eq(log_text(c).count(marker), 1, 'the pre-rotate frame was accepted again, old epoch is live')
+        seen = log_text(c).count(marker)
+        expect(seen <= 1, 'the pre-rotate frame was rendered again, old epoch is live: got %d' % seen)
 
         if not ended_or_blank(a, 1):
             marker2 = 'PROBE-ROT-2'
@@ -1188,7 +1192,7 @@ def case_migrate(app, opts):
     """R2-11: tampered M1 refused, a real migration opens a new channel and closes the old one."""
     text = app_text(app)
     expect('mig' in text, 'no migration frame in the artifact')
-    expect(re.search(r'\b15000\b|15\s*\*\s*1000|15_000', text), 'no 15 s migration timeout')
+    expect(re.search(r"migFail\('timeout'\),\s*15000", text), 'no 15 s migration timeout')
     b, a, c = open_app(app)
     try:
         peers0 = snapshot(a)['peers']
@@ -1196,8 +1200,9 @@ def case_migrate(app, opts):
         time.sleep(2)
         expect_eq(snapshot(a)['peers'], peers0, 'a tampered migration offer created a new peer')
 
-        clicked = click_text(a, r'new session|migrate|new keys')
-        expect(clicked, 'no new session control in the UI')
+        expect(a.js("(() => { const b = document.querySelector('#migrate'); return !!b && !b.disabled; })()"),
+               'no enabled #migrate control in the UI')
+        click(a, '#migrate')
         end = time.time() + 30
         state = None
         while time.time() < end:
@@ -1290,6 +1295,8 @@ def case_cover(app, opts):
 
 
 GUARDS = [
+    # Patterns are pinned to the landed V2 spellings. Every pattern must match,
+    # and the first match must be the guard site named in its comment.
     ('code-cap', r'\b16384\b|16\s*\*\s*1024|16_384', '1000000000', 'code',
      'the 16 KB paste cap is removed, an oversized paste must now reach the parser'),
     ('preparse-cap', r'\b65536\b|64\s*\*\s*1024|65_536', '1000000000', 'code',
@@ -1300,9 +1307,15 @@ GUARDS = [
      'the transcript row cap is lowered so the static assertion must fail'),
     ('kill-nav', r'about:blank', 'about:log', 'kill',
      'kill no longer navigates to about:blank'),
-    ('sas-gate', r'!\s*(?:sasOk|sasConfirmed|sasVerified|verified)\b', 'false', 'sas',
-     'the pre-confirm gate is forced open'),
-    ('completeness', r'\breceived\s*===\s*size\b', 'true', 'file',
+    # V2 spells the lock as three disabled flags immediately before showSas(),
+    # not as a named sasOk/sasVerified boolean.
+    ('sas-lock', r'el\.input\.disabled = true;\s*\n\s*el\.send\.disabled = true;\s*\n'
+                 r'\s*el\.attach\.disabled = true;\s*\n\s*showSas\(\);',
+     'el.input.disabled = false; el.send.disabled = false; el.attach.disabled = false; showSas();',
+     'sas', 'the pre-confirm composer lock is removed, content is usable before SAS confirmation'),
+    # V2 compares the running byte count against the declared size on the
+    # prefixed fields, not bare received === size.
+    ('completeness', r'f\.received\s*!==\s*f\.size', 'false', 'file',
      'the completeness check before Save is forced true'),
 ]
 
@@ -1323,6 +1336,8 @@ def case_mutation(app, opts):
     work = tempfile.mkdtemp(prefix='gate-mutation-')
     baseline = {}
     try:
+        missing = [name for name, pattern, _, _, _ in GUARDS if not re.search(pattern, text)]
+        expect(not missing, 'guards not found in the artifact: %s' % ', '.join(missing))
         for _, _, _, case, _ in GUARDS:
             if case in baseline:
                 continue

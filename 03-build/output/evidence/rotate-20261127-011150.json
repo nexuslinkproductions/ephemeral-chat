@@ -1,0 +1,16 @@
+{
+  "app": "/Users/marcelspatz/NEXUS_AI_CENTER/04_PROJECTS/EPHEMERAL/03-build/output/probes/snapshots/ephemeral-chat-v2.R2A-PROBES2.html",
+  "app_bytes": 87484,
+  "app_sha256": "998fedd53fab676f695032c73353407f7d7b18cb4b6f7b52e3710765a68ba191",
+  "argv": [
+    "03-build/output/probes/gate.py",
+    "rotate",
+    "--app",
+    "03-build/output/probes/snapshots/ephemeral-chat-v2.R2A-PROBES2.html"
+  ],
+  "case": "rotate",
+  "detail": "no wire frame captured to replay",
+  "duration_s": 6.95,
+  "exit": 1,
+  "run": "2026-11-27T01:11:50+0100"
+}
